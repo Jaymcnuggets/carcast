@@ -166,11 +166,11 @@ public struct DashboardHomeView: View {
     }
 
     private var modeSelector: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             ModeTab(title: "CarPlay", icon: "car.fill", isSelected: activeTab == "carplay") {
                 activeTab = "carplay"
             }
-            ModeTab(title: "Mirroring", icon: "rectangle.on.rectangle", isSelected: activeTab == "mirror") {
+            ModeTab(title: "Mirror", icon: "rectangle.on.rectangle", isSelected: activeTab == "mirror") {
                 activeTab = "mirror"
             }
             ModeTab(title: "AirPlay", icon: "airplayvideo", isSelected: activeTab == "airplay") {
@@ -330,14 +330,15 @@ struct ModeTab: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: 5) {
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
                 Text(title)
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .lineLimit(1)
             }
             .foregroundColor(isSelected ? .black : .white.opacity(0.7))
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .background(isSelected ? Color.white : Color.clear)
             .clipShape(Capsule())

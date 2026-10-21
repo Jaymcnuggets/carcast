@@ -8,6 +8,7 @@
 import SwiftUI
 
 public struct SettingsView: View {
+    @Environment(\.dismiss) private var dismiss
     @ObservedObject var config = CarCastConfig.shared
     @State private var showingBrandPicker: Bool = false
     @State private var showingResetAlert: Bool = false
@@ -151,6 +152,14 @@ public struct SettingsView: View {
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(.cyan)
+                }
+            }
             .sheet(isPresented: $showingBrandPicker) {
                 CarBrandPickerView(selectedBrandId: $config.selectedBrandId)
             }

@@ -10,6 +10,9 @@ import SwiftUI
 public struct ConnectRemoteView: View {
     @ObservedObject var browser = AirPlayBonjourBrowser.shared
     @Environment(\.dismiss) var dismiss
+    @State private var manualIP: String = ""
+    @State private var radarAngle: Double = 0
+    @State private var isConnectingManual: Bool = false
 
     public init() {}
 
@@ -28,11 +31,26 @@ public struct ConnectRemoteView: View {
                         Circle()
                             .fill(Color.cyan.opacity(0.2))
                             .frame(width: 36, height: 36)
+
+                        // Animated Radar Sweep Needle
+                        AngularGradient(
+                            colors: [.clear, .cyan.opacity(0.4), .clear],
+                            center: .center
+                        )
+                        .frame(width: 90, height: 90)
+                        .clipShape(Circle())
+                        .rotationEffect(.degrees(radarAngle))
+
                         Image(systemName: "antenna.radiowaves.left.and.right")
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(.cyan)
                     }
                     .padding(.top, 16)
+                    .onAppear {
+                        withAnimation(.linear(duration: 2.5).repeatForever(autoreverses: false)) {
+                            radarAngle = 360
+                        }
+                    }
 
                     Text("Searching for CarCast screens…")
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -44,6 +62,41 @@ public struct ConnectRemoteView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
                 }
+
+                // Manual IP Direct Connect Box
+                HStack(spacing: 10) {
+                    TextField("Receiver IP (e.g. 192.168.1.50)", text: $manualIP)
+                        .font(.system(size: 13, design: .monospaced))
+                        .foregroundColor(.white)
+                        .padding(10)
+                        .background(Color.white.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                    Button {
+                        guard !manualIP.isEmpty else { return }
+                        isConnectingManual = true
+                        ProtocolLogger.shared.log(
+                            category: .airplay,
+                            direction: .tx,
+                            title: "Direct Connect",
+                            detail: "Attempting direct RTSP connection to \(manualIP):7000"
+                        )
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            isConnectingManual = false
+                            dismiss()
+                        }
+                    } label: {
+                        Text(isConnectingManual ? "Connecting…" : "Direct Connect")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(manualIP.isEmpty ? Color.gray : Color.cyan)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .disabled(manualIP.isEmpty || isConnectingManual)
+                }
+                .padding(.horizontal, 20)
 
                 // Discovered List
                 if browser.receivers.isEmpty {

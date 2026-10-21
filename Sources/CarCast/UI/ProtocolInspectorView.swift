@@ -8,6 +8,7 @@
 import SwiftUI
 
 public struct ProtocolInspectorView: View {
+    @Environment(\.dismiss) private var dismiss
     @ObservedObject var logger = ProtocolLogger.shared
     @State private var selectedCategory: ProtocolCategory? = nil
     @State private var searchText: String = ""
@@ -84,12 +85,30 @@ public struct ProtocolInspectorView: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(.cyan)
+                }
+
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        logger.clear()
-                    } label: {
-                        Image(systemName: "trash")
-                            .foregroundColor(.red.opacity(0.8))
+                    HStack(spacing: 16) {
+                        if !logger.messages.isEmpty {
+                            ShareLink(
+                                item: logger.messages.map { "[\($0.timestamp.formatted())] [\($0.category.rawValue)] \($0.direction.rawValue) \($0.title)\n\($0.detail)\n" }.joined(separator: "\n---\n")
+                            ) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .foregroundColor(.cyan)
+                            }
+                        }
+
+                        Button {
+                            logger.clear()
+                        } label: {
+                            Image(systemName: "trash")
+                                .foregroundColor(.red.opacity(0.8))
+                        }
                     }
                 }
             }
@@ -223,9 +242,28 @@ struct ProtocolDetailModal: View {
                     // Hex Dump
                     if let hex = message.hexDump {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Hex & ASCII Payload")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(.gray)
+                            HStack {
+                                Text("Hex & ASCII Payload")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.gray)
+                                Spacer()
+                                Button {
+                                    #if canImport(UIKit)
+                                    UIPasteboard.general.string = hex
+                                    #endif
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "doc.on.doc")
+                                        Text("Copy")
+                                    }
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(.cyan)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Color.cyan.opacity(0.15))
+                                    .clipShape(Capsule())
+                                }
+                            }
                             Text(hex)
                                 .font(.system(size: 11, design: .monospaced))
                                 .foregroundColor(.cyan.opacity(0.9))

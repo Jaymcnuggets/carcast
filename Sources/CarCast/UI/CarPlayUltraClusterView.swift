@@ -12,6 +12,24 @@ public struct CarPlayUltraClusterView: View {
     @ObservedObject var config = CarCastConfig.shared
 
     @State private var nowPlayingOffset: CGSize = .zero
+    @State private var isMetric: Bool = false
+    @State private var selectedTheme: GaugeTheme = .cyan
+
+    public enum GaugeTheme: String, CaseIterable, Sendable {
+        case cyan = "Sport Cyan"
+        case red = "Redline"
+        case gold = "Luxury Amber"
+        case white = "Monochrome"
+
+        var color: Color {
+            switch self {
+            case .cyan: return .cyan
+            case .red: return .red
+            case .gold: return Color(red: 1.0, green: 0.78, blue: 0.28)
+            case .white: return .white
+            }
+        }
+    }
 
     public init() {}
 
@@ -29,21 +47,33 @@ public struct CarPlayUltraClusterView: View {
                 // Top status bar
                 HStack(spacing: 24) {
                     // Turn Signal Left
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(telemetry.turnSignal == .left || telemetry.turnSignal == .hazard ? .green : .gray.opacity(0.3))
+                    Button {
+                        telemetry.turnSignal = telemetry.turnSignal == .left ? .off : .left
+                    } label: {
+                        Image(systemName: "arrow.left")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(telemetry.turnSignal == .left || telemetry.turnSignal == .hazard ? .green : .gray.opacity(0.3))
+                    }
 
                     // Headlights
-                    Image(systemName: "headlight.low.beam.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(.green)
+                    Button {
+                        telemetry.headlampsOn.toggle()
+                    } label: {
+                        Image(systemName: telemetry.headlampsOn ? "headlight.low.beam.fill" : "headlight.low.beam")
+                            .font(.system(size: 14))
+                            .foregroundColor(telemetry.headlampsOn ? .green : .gray.opacity(0.4))
+                    }
 
                     // PRND Gear
                     HStack(spacing: 12) {
                         ForEach(["P", "R", "N", "D"], id: \.self) { g in
-                            Text(g)
-                                .font(.system(size: 15, weight: telemetry.gear == g ? .heavy : .regular, design: .rounded))
-                                .foregroundColor(telemetry.gear == g ? .cyan : .gray.opacity(0.5))
+                            Button {
+                                telemetry.gear = g
+                            } label: {
+                                Text(g)
+                                    .font(.system(size: 15, weight: telemetry.gear == g ? .heavy : .regular, design: .rounded))
+                                    .foregroundColor(telemetry.gear == g ? selectedTheme.color : .gray.opacity(0.5))
+                            }
                         }
                     }
                     .padding(.horizontal, 16)
@@ -51,15 +81,32 @@ public struct CarPlayUltraClusterView: View {
                     .background(Color.white.opacity(0.06))
                     .clipShape(Capsule())
 
+                    // Hazard Lights
+                    Button {
+                        telemetry.turnSignal = telemetry.turnSignal == .hazard ? .off : .hazard
+                    } label: {
+                        Image(systemName: "triangle.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(telemetry.turnSignal == .hazard ? .red : .gray.opacity(0.4))
+                    }
+
                     // Seatbelt
-                    Image(systemName: "person.badge.shield.checkmark.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(.red)
+                    Button {
+                        telemetry.seatbeltFastened.toggle()
+                    } label: {
+                        Image(systemName: "person.badge.shield.checkmark.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(telemetry.seatbeltFastened ? .green : .red)
+                    }
 
                     // Turn Signal Right
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(telemetry.turnSignal == .right || telemetry.turnSignal == .hazard ? .green : .gray.opacity(0.3))
+                    Button {
+                        telemetry.turnSignal = telemetry.turnSignal == .right ? .off : .right
+                    } label: {
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(telemetry.turnSignal == .right || telemetry.turnSignal == .hazard ? .green : .gray.opacity(0.3))
+                    }
                 }
                 .padding(.top, 16)
 
@@ -67,14 +114,21 @@ public struct CarPlayUltraClusterView: View {
 
                 // Dual Main Gauges: Speedometer & Tachometer
                 HStack(spacing: 40) {
-                    // Speedometer
-                    GaugeDialView(
-                        value: telemetry.speedMph,
-                        maxValue: 160,
-                        unit: "MPH",
-                        title: "SPEED",
-                        accentColor: .cyan
-                    )
+                    // Speedometer (Tap to toggle MPH / KMH)
+                    Button {
+                        withAnimation {
+                            isMetric.toggle()
+                        }
+                    } label: {
+                        GaugeDialView(
+                            value: isMetric ? telemetry.speedMph * 1.60934 : telemetry.speedMph,
+                            maxValue: isMetric ? 260 : 160,
+                            unit: isMetric ? "KM/H" : "MPH",
+                            title: "SPEED",
+                            accentColor: selectedTheme.color
+                        )
+                    }
+                    .buttonStyle(.plain)
 
                     // Tachometer
                     GaugeDialView(
@@ -82,7 +136,7 @@ public struct CarPlayUltraClusterView: View {
                         maxValue: 8000,
                         unit: "RPM × 1000",
                         title: "TACH",
-                        accentColor: .purple,
+                        accentColor: selectedTheme.color == .cyan ? .purple : selectedTheme.color,
                         displayDivider: 1000
                     )
                 }
@@ -106,7 +160,9 @@ public struct CarPlayUltraClusterView: View {
                         Image(systemName: "arrow.left.and.right")
                             .font(.system(size: 13))
                             .foregroundColor(.green)
-                        Text("\(telemetry.rangeMiles) mi")
+                        let range = isMetric ? Int(Double(telemetry.rangeMiles) * 1.60934) : telemetry.rangeMiles
+                        let unit = isMetric ? "km" : "mi"
+                        Text("\(range) \(unit)")
                             .font(.system(size: 13, weight: .bold, design: .monospaced))
                     }
 
@@ -283,7 +339,27 @@ struct NowPlayingCardView: View {
                 .frame(height: 3)
                 .padding(.top, 2)
             }
-            .frame(maxWidth: 180)
+            .frame(maxWidth: 160)
+
+            // Playback Controls
+            HStack(spacing: 12) {
+                Button {
+                    telemetry.isPlaying.toggle()
+                } label: {
+                    Image(systemName: telemetry.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white)
+                }
+
+                Button {
+                    telemetry.trackProgress = 0.0
+                } label: {
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 13))
+                        .foregroundColor(.white.opacity(0.8))
+                }
+            }
+            .padding(.trailing, 4)
         }
         .padding(12)
         .background(.ultraThinMaterial)

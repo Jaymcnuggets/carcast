@@ -12,6 +12,7 @@ public struct DashboardHomeView: View {
     @ObservedObject var config = CarCastConfig.shared
 
     @State private var showingSettings: Bool = false
+    @State private var showingPairingGuide: Bool = false
     @State private var showingConnectSheet: Bool = false
     @State private var showingInspector: Bool = false
     @State private var showingUltraCluster: Bool = false
@@ -103,6 +104,9 @@ public struct DashboardHomeView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
             }
+            .sheet(isPresented: $showingPairingGuide) {
+                PairingGuideView()
+            }
             .sheet(isPresented: $showingConnectSheet) {
                 ConnectRemoteView()
             }
@@ -130,41 +134,56 @@ public struct DashboardHomeView: View {
     }
 
     private var headerBar: some View {
-        HStack {
-            HStack(spacing: 10) {
+        HStack(spacing: 8) {
+            HStack(spacing: 8) {
                 Image(systemName: "car.side.fill")
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.cyan)
 
                 Text("CarCast")
-                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .font(.system(size: 20, weight: .heavy, design: .rounded))
                     .foregroundColor(.white)
+                    .lineLimit(1)
+                    .fixedSize()
             }
 
             Spacer()
 
             // Status Pill
-            HStack(spacing: 6) {
+            HStack(spacing: 5) {
                 Circle()
                     .fill(statusColor)
-                    .frame(width: 8, height: 8)
+                    .frame(width: 7, height: 7)
                 Text(manager.state.rawValue)
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundColor(statusColor)
+                    .lineLimit(1)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
             .background(Color.white.opacity(0.06))
             .clipShape(Capsule())
+
+            // Help / Pairing Guide
+            Button {
+                showingPairingGuide = true
+            } label: {
+                Image(systemName: "questionmark.circle")
+                    .font(.system(size: 16))
+                    .foregroundColor(.white.opacity(0.8))
+                    .padding(7)
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(Circle())
+            }
 
             // Settings Cog
             Button {
                 showingSettings = true
             } label: {
                 Image(systemName: "gearshape.fill")
-                    .font(.system(size: 18))
+                    .font(.system(size: 16))
                     .foregroundColor(.gray)
-                    .padding(8)
+                    .padding(7)
                     .background(Color.white.opacity(0.06))
                     .clipShape(Circle())
             }

@@ -58,6 +58,45 @@
 		<string>audio</string>
 		<string>fetch</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>CarCast uses location services to provide real-time GPS speedometer, heading, and Apple Maps navigation.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>CarCast accesses your media library to display and control native Apple Music playback.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<true/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>CPTemplateApplicationSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>CarPlay-Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>CarCast.CarPlaySceneDelegate</string>
+				</dict>
+			</array>
+			<key>CPTemplateApplicationDashboardSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>CarPlay-Dashboard-Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>CarCast.CarPlaySceneDelegate</string>
+				</dict>
+			</array>
+			<key>CPTemplateApplicationInstrumentClusterSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>CarPlay-Cluster-Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>CarCast.CarPlaySceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

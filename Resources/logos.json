@@ -1,0 +1,575 @@
+[
+  {
+    "id" : "lexus",
+    "label" : "LEXUS",
+    "title" : "Lexus",
+    "zh" : "雷克萨斯"
+  },
+  {
+    "id" : "bicycle",
+    "label" : "Bike",
+    "title" : "Bicycle",
+    "zh" : "自行车"
+  },
+  {
+    "id" : "motorcycle",
+    "label" : "Moto",
+    "title" : "Motorcycle",
+    "zh" : "摩托车"
+  },
+  {
+    "id" : "car",
+    "title" : "Car",
+    "zh" : "汽车"
+  },
+  {
+    "id" : "abarth",
+    "title" : "Abarth",
+    "zh" : "阿巴斯"
+  },
+  {
+    "id" : "acura",
+    "title" : "Acura",
+    "zh" : "讴歌"
+  },
+  {
+    "id" : "alfa_romeo",
+    "title" : "Alfa Romeo",
+    "zh" : "阿尔法·罗密欧"
+  },
+  {
+    "id" : "alpine",
+    "title" : "Alpine",
+    "zh" : "Alpine"
+  },
+  {
+    "id" : "aston_martin",
+    "title" : "Aston Martin",
+    "zh" : "阿斯顿·马丁"
+  },
+  {
+    "id" : "audi",
+    "title" : "Audi",
+    "zh" : "奥迪"
+  },
+  {
+    "id" : "baojun",
+    "title" : "Baojun",
+    "zh" : "宝骏"
+  },
+  {
+    "id" : "baw_weiwang",
+    "title" : "BAW Weiwang",
+    "zh" : "北汽威旺"
+  },
+  {
+    "id" : "bentley",
+    "title" : "Bentley",
+    "zh" : "宾利"
+  },
+  {
+    "id" : "bestune",
+    "title" : "Bestune",
+    "zh" : "奔腾"
+  },
+  {
+    "id" : "bmw",
+    "title" : "BMW",
+    "zh" : "宝马"
+  },
+  {
+    "id" : "bugatti",
+    "title" : "Bugatti",
+    "zh" : "布加迪"
+  },
+  {
+    "id" : "buick",
+    "title" : "Buick",
+    "zh" : "别克"
+  },
+  {
+    "id" : "byd",
+    "title" : "BYD",
+    "zh" : "比亚迪"
+  },
+  {
+    "id" : "cadillac",
+    "title" : "Cadillac",
+    "zh" : "凯迪拉克"
+  },
+  {
+    "id" : "changan",
+    "title" : "Changan",
+    "zh" : "长安"
+  },
+  {
+    "id" : "chery",
+    "title" : "Chery",
+    "zh" : "奇瑞"
+  },
+  {
+    "id" : "chevrolet",
+    "title" : "Chevrolet",
+    "zh" : "雪佛兰"
+  },
+  {
+    "id" : "chrysler",
+    "title" : "Chrysler",
+    "zh" : "克莱斯勒"
+  },
+  {
+    "id" : "citroen",
+    "title" : "Citroën",
+    "zh" : "雪铁龙"
+  },
+  {
+    "id" : "cupra",
+    "title" : "Cupra",
+    "zh" : "Cupra"
+  },
+  {
+    "id" : "dacia",
+    "title" : "Dacia",
+    "zh" : "达契亚"
+  },
+  {
+    "id" : "daihatsu",
+    "title" : "Daihatsu",
+    "zh" : "大发"
+  },
+  {
+    "id" : "dodge",
+    "title" : "Dodge",
+    "zh" : "道奇"
+  },
+  {
+    "id" : "dongfeng",
+    "title" : "Dongfeng",
+    "zh" : "东风"
+  },
+  {
+    "id" : "ds",
+    "title" : "DS",
+    "zh" : "DS"
+  },
+  {
+    "id" : "emgrand",
+    "title" : "Emgrand",
+    "zh" : "帝豪"
+  },
+  {
+    "id" : "exeed",
+    "title" : "Exeed",
+    "zh" : "星途"
+  },
+  {
+    "id" : "faw",
+    "title" : "FAW",
+    "zh" : "一汽"
+  },
+  {
+    "id" : "ferrari",
+    "title" : "Ferrari",
+    "zh" : "法拉利"
+  },
+  {
+    "id" : "fiat",
+    "title" : "Fiat",
+    "zh" : "菲亚特"
+  },
+  {
+    "id" : "fisker",
+    "title" : "Fisker",
+    "zh" : "菲斯克"
+  },
+  {
+    "id" : "ford",
+    "title" : "Ford",
+    "zh" : "福特"
+  },
+  {
+    "id" : "gac",
+    "title" : "GAC",
+    "zh" : "广汽"
+  },
+  {
+    "id" : "geely",
+    "title" : "Geely",
+    "zh" : "吉利"
+  },
+  {
+    "id" : "genesis",
+    "title" : "Genesis",
+    "zh" : "捷尼赛思"
+  },
+  {
+    "id" : "gmc",
+    "title" : "GMC",
+    "zh" : "GMC"
+  },
+  {
+    "id" : "great_wall",
+    "title" : "Great Wall",
+    "zh" : "长城"
+  },
+  {
+    "id" : "haima",
+    "title" : "Haima",
+    "zh" : "海马"
+  },
+  {
+    "id" : "haval",
+    "title" : "Haval",
+    "zh" : "哈弗"
+  },
+  {
+    "id" : "honda",
+    "title" : "Honda",
+    "zh" : "本田"
+  },
+  {
+    "id" : "hongqi",
+    "title" : "Hongqi",
+    "zh" : "红旗"
+  },
+  {
+    "id" : "hummer",
+    "title" : "Hummer",
+    "zh" : "悍马"
+  },
+  {
+    "id" : "hyundai",
+    "title" : "Hyundai",
+    "zh" : "现代"
+  },
+  {
+    "id" : "infiniti",
+    "title" : "Infiniti",
+    "zh" : "英菲尼迪"
+  },
+  {
+    "id" : "isuzu",
+    "title" : "Isuzu",
+    "zh" : "庆铃"
+  },
+  {
+    "id" : "jac",
+    "title" : "JAC",
+    "zh" : "江淮"
+  },
+  {
+    "id" : "jaguar",
+    "title" : "Jaguar",
+    "zh" : "捷豹"
+  },
+  {
+    "id" : "jeep",
+    "title" : "Jeep",
+    "zh" : "吉普"
+  },
+  {
+    "id" : "jetour",
+    "title" : "Jetour",
+    "zh" : "捷途"
+  },
+  {
+    "id" : "jmc",
+    "title" : "JMC",
+    "zh" : "江铃"
+  },
+  {
+    "id" : "kia",
+    "title" : "Kia",
+    "zh" : "起亚"
+  },
+  {
+    "id" : "koenigsegg",
+    "title" : "Koenigsegg",
+    "zh" : "柯尼塞格"
+  },
+  {
+    "id" : "lada",
+    "title" : "Lada",
+    "zh" : "拉达"
+  },
+  {
+    "id" : "lamborghini",
+    "title" : "Lamborghini",
+    "zh" : "兰博基尼"
+  },
+  {
+    "id" : "lancia",
+    "title" : "Lancia",
+    "zh" : "蓝旗亚"
+  },
+  {
+    "id" : "land_rover",
+    "title" : "Land Rover",
+    "zh" : "路虎"
+  },
+  {
+    "id" : "leapmotor",
+    "title" : "Leapmotor",
+    "zh" : "零跑"
+  },
+  {
+    "id" : "li_auto",
+    "title" : "Li Auto",
+    "zh" : "理想"
+  },
+  {
+    "id" : "lincoln",
+    "title" : "Lincoln",
+    "zh" : "林肯"
+  },
+  {
+    "id" : "lotus",
+    "title" : "Lotus",
+    "zh" : "路特斯"
+  },
+  {
+    "id" : "lucid",
+    "title" : "Lucid",
+    "zh" : "Lucid"
+  },
+  {
+    "id" : "luxgen",
+    "title" : "Luxgen",
+    "zh" : "纳智捷"
+  },
+  {
+    "id" : "lynk_co",
+    "title" : "Lynk & Co",
+    "zh" : "领克"
+  },
+  {
+    "id" : "mahindra",
+    "title" : "Mahindra",
+    "zh" : "马恒达"
+  },
+  {
+    "id" : "maserati",
+    "title" : "Maserati",
+    "zh" : "玛莎拉蒂"
+  },
+  {
+    "id" : "mazda",
+    "title" : "Mazda",
+    "zh" : "马自达"
+  },
+  {
+    "id" : "mclaren",
+    "title" : "McLaren",
+    "zh" : "迈凯伦"
+  },
+  {
+    "id" : "mercedes_benz",
+    "title" : "Mercedes-Benz",
+    "zh" : "奔驰"
+  },
+  {
+    "id" : "mg",
+    "title" : "MG",
+    "zh" : "名爵"
+  },
+  {
+    "id" : "mini",
+    "title" : "MINI",
+    "zh" : "mini"
+  },
+  {
+    "id" : "mitsubishi",
+    "title" : "Mitsubishi",
+    "zh" : "三菱"
+  },
+  {
+    "id" : "nio",
+    "title" : "NIO",
+    "zh" : "蔚来"
+  },
+  {
+    "id" : "nissan",
+    "title" : "Nissan",
+    "zh" : "日产"
+  },
+  {
+    "id" : "opel",
+    "title" : "Opel",
+    "zh" : "欧宝"
+  },
+  {
+    "id" : "pagani",
+    "title" : "Pagani",
+    "zh" : "帕加尼"
+  },
+  {
+    "id" : "perodua",
+    "title" : "Perodua",
+    "zh" : "Perodua"
+  },
+  {
+    "id" : "peugeot",
+    "title" : "Peugeot",
+    "zh" : "标志"
+  },
+  {
+    "id" : "polestar",
+    "title" : "Polestar",
+    "zh" : "极星"
+  },
+  {
+    "id" : "pontiac",
+    "title" : "Pontiac",
+    "zh" : "庞蒂克"
+  },
+  {
+    "id" : "porsche",
+    "title" : "Porsche",
+    "zh" : "保时捷"
+  },
+  {
+    "id" : "proton",
+    "title" : "Proton",
+    "zh" : "宝腾"
+  },
+  {
+    "id" : "ram",
+    "title" : "RAM",
+    "zh" : "RAM"
+  },
+  {
+    "id" : "renault",
+    "title" : "Renault",
+    "zh" : "雷诺"
+  },
+  {
+    "id" : "rivian",
+    "title" : "Rivian",
+    "zh" : "Rivian"
+  },
+  {
+    "id" : "roewe",
+    "title" : "Roewe",
+    "zh" : "荣威"
+  },
+  {
+    "id" : "rolls_royce",
+    "title" : "Rolls-Royce",
+    "zh" : "劳斯莱斯"
+  },
+  {
+    "id" : "saab",
+    "title" : "Saab",
+    "zh" : "萨博"
+  },
+  {
+    "id" : "scion",
+    "title" : "Scion",
+    "zh" : "Scion"
+  },
+  {
+    "id" : "seat",
+    "title" : "SEAT",
+    "zh" : "西雅特"
+  },
+  {
+    "id" : "sgmw",
+    "title" : "SGMW",
+    "zh" : "五菱"
+  },
+  {
+    "id" : "skoda",
+    "title" : "Skoda",
+    "zh" : "斯柯达"
+  },
+  {
+    "id" : "smart",
+    "title" : "smart",
+    "zh" : "smart"
+  },
+  {
+    "id" : "ssangyong",
+    "title" : "SsangYong",
+    "zh" : "双龙"
+  },
+  {
+    "id" : "subaru",
+    "title" : "Subaru",
+    "zh" : "斯巴鲁"
+  },
+  {
+    "id" : "suzuki",
+    "title" : "Suzuki",
+    "zh" : "铃木"
+  },
+  {
+    "id" : "tata",
+    "title" : "Tata",
+    "zh" : "塔塔"
+  },
+  {
+    "id" : "tesla",
+    "title" : "Tesla",
+    "zh" : "特斯拉"
+  },
+  {
+    "id" : "toyota",
+    "title" : "Toyota",
+    "zh" : "丰田"
+  },
+  {
+    "id" : "toyota_crown",
+    "title" : "Toyota Crown",
+    "zh" : "皇冠"
+  },
+  {
+    "id" : "vauxhall",
+    "title" : "Vauxhall",
+    "zh" : "沃克斯豪尔"
+  },
+  {
+    "id" : "venucia",
+    "title" : "Venucia",
+    "zh" : "启辰"
+  },
+  {
+    "id" : "vinfast",
+    "title" : "VinFast",
+    "zh" : "VinFast"
+  },
+  {
+    "id" : "volkswagen",
+    "title" : "Volkswagen",
+    "zh" : "大众"
+  },
+  {
+    "id" : "volvo",
+    "title" : "Volvo",
+    "zh" : "沃尔沃"
+  },
+  {
+    "id" : "wey",
+    "title" : "WEY",
+    "zh" : "魏派"
+  },
+  {
+    "id" : "xiaomi",
+    "title" : "Xiaomi",
+    "zh" : "小米"
+  },
+  {
+    "id" : "xpeng",
+    "title" : "XPeng",
+    "zh" : "小鹏"
+  },
+  {
+    "id" : "zeekr",
+    "title" : "Zeekr",
+    "zh" : "极氪"
+  },
+  {
+    "id" : "zotye",
+    "title" : "Zotye",
+    "zh" : "众泰"
+  }
+]

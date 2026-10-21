@@ -1,0 +1,40 @@
+name: CarCast
+options:
+  bundleIdPrefix: dev.unordinarylabs
+  createIntermediateGroups: true
+  organizationName: "Unordinary Labs LLC"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    DEVELOPMENT_TEAM: B59L39ZY2H
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: "Apple Development"
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: "1.0.0"
+    PRODUCT_NAME: "CarCast"
+
+targets:
+  CarCast:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Sources/CarCast
+      - path: Resources/logos.json
+        buildPhase: resources
+      - path: Resources/Logos
+        type: folder
+        buildPhase: resources
+      - path: Resources/AppIcon
+        type: folder
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.unordinarylabs.CarCast
+        INFOPLIST_FILE: Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: CarCast.entitlements
+    scheme: {}

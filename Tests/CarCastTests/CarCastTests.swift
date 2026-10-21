@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import Network
 @testable import CarCast
 
 final class CarCastTests: XCTestCase {
@@ -137,5 +138,35 @@ final class CarCastTests: XCTestCase {
         XCTAssertEqual(logger.messages.count, 100)
         XCTAssertEqual(logger.messages.last?.title, "Test Message 99")
         logger.clear()
+    }
+
+    func testWiFiBonjourBroadcastAndDiscovery() async throws {
+        let advertiser = AirPlayBonjourAdvertiser(port: 7000)
+        let testName = "CarCast-UnitTest-\(UUID().uuidString.prefix(6))"
+        advertiser.startAdvertising(name: testName, deviceId: "02:00:AA:BB:CC:DD")
+
+        let exp = expectation(description: "Bonjour service discovered over local network")
+
+        let descriptor = NWBrowser.Descriptor.bonjour(type: "_carcast._tcp.", domain: "local.")
+        let params = NWParameters()
+        params.includePeerToPeer = true
+        let browser = NWBrowser(for: descriptor, using: params)
+
+        browser.browseResultsChangedHandler = { results, _ in
+            for res in results {
+                if case let .service(name, _, _, _) = res.endpoint {
+                    if name.contains(testName) {
+                        exp.fulfill()
+                        return
+                    }
+                }
+            }
+        }
+        browser.start(queue: .main)
+
+        await fulfillment(of: [exp], timeout: 6.0)
+
+        browser.cancel()
+        advertiser.stopAdvertising()
     }
 }

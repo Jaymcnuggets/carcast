@@ -59,7 +59,12 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
 
         let config = CarCastConfig.shared
         let carName = config.carName
-        let deviceId = "0200" + String(format: "%08X", Int.random(in: 0x10000000...0x7FFFFFFF))
+        let r = UInt32.random(in: 0x10000000...0xFFFFFFFF)
+        let b2 = UInt8((r >> 24) & 0xFF)
+        let b3 = UInt8((r >> 16) & 0xFF)
+        let b4 = UInt8((r >> 8) & 0xFF)
+        let b5 = UInt8(r & 0xFF)
+        let deviceId = String(format: "02:00:%02X:%02X:%02X:%02X", b2, b3, b4, b5)
 
         do {
             try rtspServer.start()
@@ -70,7 +75,7 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
             ProtocolLogger.shared.log(
                 category: .system,
                 title: "CarPlay Receiver Started",
-                detail: "Name: \(carName) | RTSP :7000 | Screen :7100"
+                detail: "Name: \(carName) (ID: \(deviceId)) | RTSP :7000 | Screen :7100"
             )
         } catch {
             state = .error
@@ -82,7 +87,46 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
         }
     }
 
+    private var simulationTimer: Timer?
+
+    public func startLocalSimulation() {
+        if state == .idle || state == .error {
+            startReceiver()
+        }
+
+        isStreamingActive = true
+        state = .streaming
+        connectedClientName = "This iPhone"
+
+        ProtocolLogger.shared.log(
+            category: .system,
+            title: "Local CarPlay Simulation Active",
+            detail: "Loopback head unit running on device"
+        )
+
+        // Start dynamic vehicle telemetry loop for cockpit cluster
+        simulationTimer?.invalidate()
+        simulationTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self = self, self.isStreamingActive else { return }
+                let t = Date().timeIntervalSince1970
+                let speed = 45.0 + 20.0 * sin(t * 0.3)
+                let rpm = 2200.0 + 1200.0 * sin(t * 0.8)
+                let gear = speed < 15 ? "1" : (speed < 30 ? "2" : (speed < 45 ? "3" : (speed < 60 ? "4" : "D")))
+
+                VehicleTelemetry.shared.updateDriving(
+                    speed: max(0, speed),
+                    rpm: max(800, rpm),
+                    gear: gear,
+                    turnSignal: sin(t * 0.2) > 0.7 ? .left : (sin(t * 0.2) < -0.7 ? .right : .off)
+                )
+            }
+        }
+    }
+
     public func stopReceiver() {
+        simulationTimer?.invalidate()
+        simulationTimer = nil
         bonjourAdvertiser.stopAdvertising()
         screenReceiver.stop()
         rtspServer.stop()

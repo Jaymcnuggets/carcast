@@ -77,6 +77,18 @@ public final class VehicleTelemetry: ObservableObject {
         }
     }
 
+    public func updateDriving(
+        speed: Double,
+        rpm: Double,
+        gear: String,
+        turnSignal: TurnSignalState = .off
+    ) {
+        self.speedMph = speed
+        self.rpm = rpm
+        self.gear = gear
+        self.turnSignal = turnSignal
+    }
+
     public func updateNowPlaying(
         title: String,
         artist: String,

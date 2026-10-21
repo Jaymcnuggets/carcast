@@ -15,6 +15,7 @@ public struct DashboardHomeView: View {
     @State private var showingConnectSheet: Bool = false
     @State private var showingInspector: Bool = false
     @State private var showingUltraCluster: Bool = false
+    @State private var showingActiveCarPlay: Bool = false
     @State private var activeTab: String = "carplay"
 
     public init() {}
@@ -53,8 +54,8 @@ public struct DashboardHomeView: View {
                 if manager.state == .streaming {
                     VStack {
                         Spacer()
-                        NavigationLink {
-                            CarPlayActiveScreenView()
+                        Button {
+                            showingActiveCarPlay = true
                         } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "play.tv.fill")
@@ -84,6 +85,20 @@ public struct DashboardHomeView: View {
             }
             #if os(iOS)
             .toolbar(.hidden, for: .navigationBar)
+            #endif
+            .onAppear {
+                if manager.state == .idle {
+                    manager.startReceiver()
+                }
+            }
+            #if os(iOS)
+            .fullScreenCover(isPresented: $showingActiveCarPlay) {
+                CarPlayActiveScreenView()
+            }
+            #else
+            .sheet(isPresented: $showingActiveCarPlay) {
+                CarPlayActiveScreenView()
+            }
             #endif
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
@@ -271,9 +286,8 @@ public struct DashboardHomeView: View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
             // Feature 1: This iPhone
             Button {
-                if manager.state == .idle {
-                    manager.startReceiver()
-                }
+                manager.startLocalSimulation()
+                showingActiveCarPlay = true
             } label: {
                 DashboardCard(
                     icon: "iphone.gen3",

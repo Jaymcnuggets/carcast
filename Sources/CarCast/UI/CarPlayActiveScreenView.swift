@@ -8,6 +8,7 @@
 import SwiftUI
 
 public struct CarPlayActiveScreenView: View {
+    @Environment(\.dismiss) private var dismiss
     @ObservedObject var manager = CarPlayManager.shared
     @ObservedObject var config = CarCastConfig.shared
     @State private var showControlsOverlay: Bool = true
@@ -40,7 +41,7 @@ public struct CarPlayActiveScreenView: View {
                         HStack(spacing: 16) {
                             // Car OEM Brand Logo button (returns to CarCast car screen)
                             Button {
-                                manager.returnToCarPlay()
+                                dismiss()
                             } label: {
                                 HStack(spacing: 8) {
                                     Image(systemName: "car.fill")
@@ -88,6 +89,7 @@ public struct CarPlayActiveScreenView: View {
                             // Disconnect Button
                             Button {
                                 manager.stopReceiver()
+                                dismiss()
                             } label: {
                                 Image(systemName: "xmark")
                                     .font(.system(size: 14, weight: .bold))

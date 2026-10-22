@@ -2,7 +2,7 @@
 //  DashboardHomeView.swift
 //  CarCast
 //
-//  Main automotive cockpit dashboard for CarCast.
+//  Authentic CarCast Home View for iOS/iPadOS matching 1:1 ground-truth layout.
 //
 
 import SwiftUI
@@ -12,400 +12,283 @@ public struct DashboardHomeView: View {
     @ObservedObject var config = CarCastConfig.shared
 
     @State private var showingSettings: Bool = false
-    @State private var showingPairingGuide: Bool = false
-    @State private var showingConnectSheet: Bool = false
-    @State private var showingInspector: Bool = false
-    @State private var showingUltraCluster: Bool = false
+    @State private var showingConnect: Bool = false
     @State private var showingActiveCarPlay: Bool = false
-    @State private var activeTab: String = "carplay"
+    @State private var isStarting: Bool = false
+    @State private var showingPasswordAlert: Bool = false
+    @State private var enteredPassword: String = ""
 
     public init() {}
 
-    public var body: some View {
-        NavigationStack {
-            ZStack {
-                // Background dark gradient
-                Color(red: 0.04, green: 0.05, blue: 0.08)
-                    .ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Top Header Bar
-                        headerBar
-
-                        // Mode Selector (CarPlay, Mirroring, AirPlay)
-                        modeSelector
-
-                        // Central Vehicle Identity Card
-                        vehicleCard
-
-                        // Main Action Button (Start / Stop)
-                        mainActionButton
-
-                        // Feature Grid: This iPhone, Connect, CarPlay Ultra, Inspector
-                        featureGrid
-
-                        Spacer(minLength: 32)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-                }
-
-                // If currently streaming and user returns, show floating banner to jump back into CarPlay
-                if manager.state == .streaming {
-                    VStack {
-                        Spacer()
-                        Button {
-                            showingActiveCarPlay = true
-                        } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: "play.tv.fill")
-                                    .font(.system(size: 18))
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("CarPlay is Active")
-                                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                                    Text("Tap to return to fullscreen")
-                                        .font(.system(size: 12, design: .rounded))
-                                        .opacity(0.8)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .semibold))
-                            }
-                            .foregroundColor(.black)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 14)
-                            .background(Color.cyan)
-                            .clipShape(Capsule())
-                            .shadow(color: Color.cyan.opacity(0.4), radius: 12, x: 0, y: 6)
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 20)
-                    }
-                }
-            }
-            #if os(iOS)
-            .toolbar(.hidden, for: .navigationBar)
-            #endif
-            .onAppear {
-                if manager.state == .idle {
-                    manager.startReceiver()
-                }
-            }
-            #if os(iOS)
-            .fullScreenCover(isPresented: $showingActiveCarPlay) {
-                CarPlayActiveScreenView()
-            }
-            .fullScreenCover(isPresented: $showingUltraCluster) {
-                CarPlayUltraClusterView()
-                    .ignoresSafeArea()
-            }
-            #else
-            .sheet(isPresented: $showingActiveCarPlay) {
-                CarPlayActiveScreenView()
-            }
-            .sheet(isPresented: $showingUltraCluster) {
-                CarPlayUltraClusterView()
-            }
-            #endif
-            .sheet(isPresented: $showingSettings) {
-                SettingsView()
-            }
-            .sheet(isPresented: $showingPairingGuide) {
-                PairingGuideView()
-            }
-            .sheet(isPresented: $showingConnectSheet) {
-                ConnectRemoteView()
-            }
-            .sheet(isPresented: $showingInspector) {
-                ProtocolInspectorView()
-            }
+    private var statusText: String {
+        if isStarting {
+            return "Starting…"
         }
-    }
-
-    private var headerBar: some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "car.side.fill")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.cyan)
-
-                Text("CarCast")
-                    .font(.system(size: 20, weight: .heavy, design: .rounded))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                    .fixedSize()
-            }
-
-            Spacer()
-
-            // Status Pill
-            HStack(spacing: 5) {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 7, height: 7)
-                Text(manager.state.rawValue)
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundColor(statusColor)
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(Color.white.opacity(0.06))
-            .clipShape(Capsule())
-
-            // Help / Pairing Guide
-            Button {
-                showingPairingGuide = true
-            } label: {
-                Image(systemName: "questionmark.circle")
-                    .font(.system(size: 16))
-                    .foregroundColor(.white.opacity(0.8))
-                    .padding(7)
-                    .background(Color.white.opacity(0.06))
-                    .clipShape(Circle())
-            }
-
-            // Settings Cog
-            Button {
-                showingSettings = true
-            } label: {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(.gray)
-                    .padding(7)
-                    .background(Color.white.opacity(0.06))
-                    .clipShape(Circle())
-            }
+        switch manager.state {
+        case .idle:
+            return "Waiting for iPhone"
+        case .starting:
+            return "Starting…"
+        case .waitingForPhone:
+            return "Waiting for iPhone"
+        case .connecting:
+            return "Connecting…"
+        case .streaming:
+            return "CarPlay is connected"
+        case .error:
+            return "CarPlay didn't start"
         }
     }
 
     private var statusColor: Color {
         switch manager.state {
-        case .idle: return .gray
-        case .starting, .waitingForPhone, .connecting: return .yellow
-        case .streaming: return .green
-        case .error: return .red
+        case .streaming:
+            return Color(white: 0.85)
+        case .error:
+            return Color(red: 1.0, green: 0.4, blue: 0.4)
+        default:
+            return Color(white: 0.6)
         }
     }
 
-    private var modeSelector: some View {
-        HStack(spacing: 6) {
-            ModeTab(title: "CarPlay", icon: "car.fill", isSelected: activeTab == "carplay") {
-                activeTab = "carplay"
-            }
-            ModeTab(title: "Mirror", icon: "rectangle.on.rectangle", isSelected: activeTab == "mirror") {
-                activeTab = "mirror"
-            }
-            ModeTab(title: "AirPlay", icon: "airplayvideo", isSelected: activeTab == "airplay") {
-                activeTab = "airplay"
-            }
-        }
-        .padding(4)
-        .background(Color.white.opacity(0.05))
-        .clipShape(Capsule())
-    }
+    public var body: some View {
+        NavigationStack {
+            ZStack {
+                // Pure OLED Black Background matching authentic screenshot
+                Color.black.ignoresSafeArea()
 
-    private var vehicleCard: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 16) {
-                // Brand Avatar
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.08))
-                        .frame(width: 56, height: 56)
+                VStack(spacing: 0) {
+                    Spacer(minLength: 40)
 
-                    Image(systemName: "car.side.fill")
-                        .font(.system(size: 26))
-                        .foregroundColor(.cyan)
-                }
+                    // Central CarCast Brand Icon
+                    carCastAppIcon
+                        .frame(width: 96, height: 96)
+                        .padding(.bottom, 22)
 
-                VStack(alignment: .leading, spacing: 4) {
+                    // Car Name Title: e.g. "CarCast-D3F3"
                     Text(config.carName)
-                        .font(.system(size: 20, weight: .heavy, design: .rounded))
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
+                        .padding(.bottom, 8)
 
-                    let brandTitle = CarBrandCatalog.shared.brand(for: config.selectedBrandId)?.title ?? "Vehicle"
-                    Text("\(brandTitle) • \(config.drivingPosition.title)")
-                        .font(.system(size: 13, design: .rounded))
-                        .foregroundColor(.gray)
-                }
+                    // Subtitle Status: "Waiting for iPhone"
+                    Text(statusText)
+                        .font(.system(size: 17, weight: .regular))
+                        .foregroundColor(statusColor)
 
-                Spacer()
-            }
+                    Spacer(minLength: 60)
 
-            Divider()
-                .background(Color.white.opacity(0.1))
-
-            // Sub-info: Wi-Fi & Link-Local IPv6
-            HStack(spacing: 20) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("WI-FI NETWORK")
-                        .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                        .foregroundColor(.gray)
-                    Text(config.wifiSSID)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white.opacity(0.9))
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 3) {
-                    Text("CHANNEL")
-                        .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                        .foregroundColor(.gray)
-                    Text("Ch \(config.wifiChannel) (5 GHz)")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundColor(.cyan)
+                    // Bottom Navigation Buttons matching authentic screenshot
+                    bottomButtonBar
+                        .padding(.horizontal, 32)
+                        .padding(.bottom, 34)
                 }
             }
-        }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(red: 0.07, green: 0.09, blue: 0.14))
-                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.08), lineWidth: 1))
-        )
-    }
-
-    private var mainActionButton: some View {
-        Button {
-            if manager.state == .idle || manager.state == .error {
-                manager.startReceiver()
-            } else {
-                manager.stopReceiver()
+            #if os(iOS)
+            .toolbar(.hidden, for: .navigationBar)
+            #endif
+            #if os(iOS)
+            .fullScreenCover(isPresented: $showingActiveCarPlay) {
+                CarPlayActiveScreenView()
             }
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: manager.state == .idle ? "power" : "stop.fill")
-                    .font(.system(size: 18, weight: .bold))
-                Text(manager.state == .idle ? "Start Receiver" : "Stop Receiver")
-                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+            #else
+            .sheet(isPresented: $showingActiveCarPlay) {
+                CarPlayActiveScreenView()
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .foregroundColor(manager.state == .idle ? .black : .white)
-            .background(manager.state == .idle ? Color.cyan : Color.red.opacity(0.85))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: (manager.state == .idle ? Color.cyan : Color.red).opacity(0.3), radius: 10, x: 0, y: 5)
-        }
-    }
-
-    private var featureGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
-            // Feature 1: This iPhone
-            Button {
-                manager.startLocalSimulation()
-                showingActiveCarPlay = true
-            } label: {
-                DashboardCard(
-                    icon: "iphone.gen3",
-                    title: "This iPhone",
-                    subtitle: "CarPlay locally",
-                    accent: .blue
-                )
+            #endif
+            .sheet(isPresented: $showingSettings) {
+                SettingsView()
             }
-
-            // Feature 2: Connect
-            Button {
-                showingConnectSheet = true
-            } label: {
-                DashboardCard(
-                    icon: "antenna.radiowaves.left.and.right",
-                    title: "Connect",
-                    subtitle: "Cast to iPad/Screen",
-                    accent: .orange
-                )
+            .sheet(isPresented: $showingConnect) {
+                ConnectRemoteView()
             }
-
-            // Feature 3: CarPlay Ultra
-            Button {
-                showingUltraCluster = true
-            } label: {
-                DashboardCard(
-                    icon: "gauge.with.needle.fill",
-                    title: "CarPlay Ultra",
-                    subtitle: "Cockpit Cluster",
-                    accent: .purple
-                )
-            }
-
-            // Feature 4: Protocol Inspector
-            Button {
-                showingInspector = true
-            } label: {
-                DashboardCard(
-                    icon: "waveform.path.ecg",
-                    title: "Inspector",
-                    subtitle: "Live packet logs",
-                    accent: .cyan
-                )
+            .alert("Wi-Fi Password", isPresented: $showingPasswordAlert) {
+                SecureField("Password for \(config.wifiSSID)", text: $enteredPassword)
+                Button("Save and Connect") {
+                    config.wifiPassphrase = enteredPassword
+                    startThisiPhoneSession()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("iOS requires the network password to register this car for CarPlay. It is stored securely on this iPhone.")
             }
         }
     }
-}
 
-struct ModeTab: View {
-    let title: String
-    let icon: String
-    let isSelected: Bool
-    let action: () -> Void
+    // MARK: - App Icon View
 
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .bold))
-                Text(title)
-                    .font(.system(size: 12, weight: .heavy, design: .rounded))
-                    .lineLimit(1)
-            }
-            .foregroundColor(isSelected ? .black : .white.opacity(0.7))
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(isSelected ? Color.white : Color.clear)
-            .clipShape(Capsule())
+    @ViewBuilder
+    private var carCastAppIcon: some View {
+        #if canImport(UIKit)
+        if let icon = UIImage(named: "AppIcon") ?? UIImage(contentsOfFile: Bundle.main.path(forResource: "AppIcon", ofType: "png") ?? "") {
+            Image(uiImage: icon)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .shadow(color: Color.purple.opacity(0.3), radius: 16, x: 0, y: 8)
+        } else {
+            fallbackAppIcon
         }
+        #else
+        fallbackAppIcon
+        #endif
     }
-}
 
-struct DashboardCard: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    let accent: Color
+    private var fallbackAppIcon: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.38, green: 0.45, blue: 0.96),
+                    Color(red: 0.65, green: 0.40, blue: 0.98)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            VStack(spacing: 4) {
                 ZStack {
-                    Circle()
-                        .fill(accent.opacity(0.18))
-                        .frame(width: 38, height: 38)
-                    Image(systemName: icon)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(accent)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white.opacity(0.2))
-            }
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.white, lineWidth: 3.5)
+                        .frame(width: 52, height: 32)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 15, weight: .heavy, design: .rounded))
-                    .foregroundColor(.white)
-                Text(subtitle)
-                    .font(.system(size: 12, design: .rounded))
-                    .foregroundColor(.gray)
+                    HStack(spacing: 8) {
+                        Image(systemName: "wifi")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
+
+                // Monitor Stand Base
+                Rectangle()
+                    .fill(Color.white)
+                    .frame(width: 8, height: 6)
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color.white)
+                    .frame(width: 28, height: 3)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(red: 0.07, green: 0.09, blue: 0.14))
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.06), lineWidth: 1))
-        )
+        .shadow(color: Color.purple.opacity(0.35), radius: 16, x: 0, y: 8)
+    }
+
+    // MARK: - Bottom Button Bar
+
+    private var bottomButtonBar: some View {
+        HStack(spacing: 0) {
+            // Settings Button (Always on Left)
+            Button {
+                showingSettings = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 18, weight: .medium))
+                    Text("Settings")
+                        .font(.system(size: 17, weight: .regular))
+                }
+                .foregroundColor(Color(red: 0.0, green: 0.50, blue: 1.0))
+            }
+
+            Spacer()
+
+            if manager.state == .streaming {
+                // If CarPlay is connected: "Back to CarPlay" and "Stop"
+                Button {
+                    showingActiveCarPlay = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "play.tv.fill")
+                            .font(.system(size: 18, weight: .medium))
+                        Text("Back to CarPlay")
+                            .font(.system(size: 17, weight: .medium))
+                    }
+                    .foregroundColor(Color(red: 0.0, green: 0.50, blue: 1.0))
+                }
+
+                Spacer()
+
+                Button {
+                    stopSession()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Stop")
+                            .font(.system(size: 17, weight: .medium))
+                    }
+                    .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.23))
+                }
+            } else if isStarting || manager.state == .starting || manager.state == .connecting {
+                // While starting: show "Stop" button in red
+                Button {
+                    stopSession()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Stop")
+                            .font(.system(size: 17, weight: .medium))
+                    }
+                    .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.23))
+                }
+            } else {
+                // Standard Idle State matching authentic screenshot: "Connect" and "This iPhone"
+                Button {
+                    showingConnect = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "iphone.radiowaves.left.and.right")
+                            .font(.system(size: 18, weight: .medium))
+                        Text("Connect")
+                            .font(.system(size: 17, weight: .regular))
+                    }
+                    .foregroundColor(Color(red: 0.0, green: 0.50, blue: 1.0))
+                }
+
+                Spacer()
+
+                Button {
+                    handleThisiPhoneTap()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "iphone")
+                            .font(.system(size: 18, weight: .medium))
+                        Text("This iPhone")
+                            .font(.system(size: 17, weight: .regular))
+                    }
+                    .foregroundColor(Color(red: 0.0, green: 0.50, blue: 1.0))
+                }
+                .simultaneousGesture(LongPressGesture(minimumDuration: 0.8).onEnded { _ in
+                    enteredPassword = config.wifiPassphrase
+                    showingPasswordAlert = true
+                })
+            }
+        }
+    }
+
+    // MARK: - Actions
+
+    private func handleThisiPhoneTap() {
+        if config.wifiPassphrase.isEmpty && !config.wifiSSID.isEmpty {
+            showingPasswordAlert = true
+        } else {
+            startThisiPhoneSession()
+        }
+    }
+
+    private func startThisiPhoneSession() {
+        isStarting = true
+        manager.startReceiver()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            isStarting = false
+            showingActiveCarPlay = true
+        }
+    }
+
+    private func stopSession() {
+        isStarting = false
+        manager.stopReceiver()
     }
 }

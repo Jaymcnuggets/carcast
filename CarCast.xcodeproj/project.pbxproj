@@ -107,6 +107,7 @@
 				3CA1C1AF24ABDECA9A5DF252 /* AppIcon */,
 				8256C2DD242EE8927DE193AD /* Logos */,
 				EDB82F689DBF0B91C3F3FBA8 /* logos.json */,
+				88A100022C12345600000002 /* carplay_stream_loop.mp4 */,
 			);
 			path = Resources;
 			sourceTree = "<group>";

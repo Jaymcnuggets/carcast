@@ -36,6 +36,8 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
     @Published public private(set) var currentStreamResolution: CGSize = .zero
     @Published public private(set) var isStreamingActive: Bool = false
     @Published public var lastSampleBuffer: CMSampleBuffer? = nil
+    public var hasSampleBuffer: Bool { lastSampleBuffer != nil }
+    public var onSampleBuffer: ((CMSampleBuffer) -> Void)? = nil
     @Published public private(set) var totalFramesReceived: Int = 0
     @Published public private(set) var lastFrameTime: Date? = nil
 
@@ -91,6 +93,21 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
 
     private var simulationTimer: Timer?
 
+    public func enqueueLoopbackSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
+        self.lastSampleBuffer = sampleBuffer
+        self.totalFramesReceived += 1
+        self.lastFrameTime = Date()
+        if !self.isStreamingActive {
+            self.isStreamingActive = true
+            self.state = .streaming
+            if self.connectedClientName == nil {
+                self.connectedClientName = "This iPhone"
+            }
+            self.currentStreamResolution = CGSize(width: 1280, height: 494)
+        }
+        self.onSampleBuffer?(sampleBuffer)
+    }
+
     public func startLocalSimulation() {
         if state == .idle || state == .error {
             startReceiver()
@@ -99,6 +116,7 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
         isStreamingActive = true
         state = .streaming
         connectedClientName = "This iPhone"
+        currentStreamResolution = CGSize(width: 1280, height: 494)
 
         ProtocolLogger.shared.log(
             category: .system,
@@ -175,6 +193,7 @@ extension CarPlayManager: AirPlayScreenReceiverDelegate {
             self.lastSampleBuffer = sampleBuffer
             self.totalFramesReceived += 1
             self.lastFrameTime = Date()
+            self.onSampleBuffer?(sampleBuffer)
         }
     }
 

@@ -169,4 +169,23 @@ final class CarCastTests: XCTestCase {
         browser.cancel()
         advertiser.stopAdvertising()
     }
+
+    func testCarPlayReceiverStateTransitions() async throws {
+        let manager = await CarPlayManager.shared
+        await manager.startReceiver()
+        var state = await manager.state
+        XCTAssertEqual(state, .waitingForPhone)
+
+        await manager.startLocalSimulation()
+        let isStreaming = await manager.isStreamingActive
+        state = await manager.state
+        XCTAssertTrue(isStreaming)
+        XCTAssertEqual(state, .streaming)
+
+        await manager.stopReceiver()
+        state = await manager.state
+        let stoppedStreaming = await manager.isStreamingActive
+        XCTAssertEqual(state, .idle)
+        XCTAssertFalse(stoppedStreaming)
+    }
 }

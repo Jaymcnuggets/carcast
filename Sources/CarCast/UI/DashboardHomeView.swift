@@ -117,6 +117,14 @@ public struct DashboardHomeView: View {
                 let networkName = config.wifiSSID.isEmpty ? "your Wi-Fi network" : "\"\(config.wifiSSID)\""
                 Text("iOS requires the network password to register this car for CarPlay on \(networkName). It is stored securely on this iPhone.")
             }
+            .onChange(of: manager.isStreamingActive) { active in
+                if active {
+                    isStarting = false
+                    showingActiveCarPlay = true
+                } else {
+                    showingActiveCarPlay = false
+                }
+            }
             .onAppear {
                 WiFiNetworkService.shared.fetchCurrentSSID { ssid in
                     if let ssid = ssid, !ssid.isEmpty {
@@ -308,14 +316,11 @@ public struct DashboardHomeView: View {
     private func startThisiPhoneSession() {
         isStarting = true
         manager.startReceiver()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            isStarting = false
-            showingActiveCarPlay = true
-        }
     }
 
     private func stopSession() {
         isStarting = false
+        showingActiveCarPlay = false
         manager.stopReceiver()
     }
 }

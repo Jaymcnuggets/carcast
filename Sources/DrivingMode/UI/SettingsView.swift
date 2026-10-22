@@ -1,15 +1,15 @@
 //
 //  SettingsView.swift
-//  CarCast
+//  DrivingMode
 //
-//  Complete vehicle, display, cluster, and network settings matching 1:1 authentic CarCast screenshots.
+//  Complete vehicle, display, cluster, and network settings matching 1:1 authentic layout.
 //
 
 import SwiftUI
 
 public struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var config = CarCastConfig.shared
+    @ObservedObject var config = DrivingModeConfig.shared
 
     @State private var showingBrandPicker: Bool = false
     @State private var showingNameEditor: Bool = false

@@ -9,7 +9,7 @@ import SwiftUI
 
 public struct PairingGuideView: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var config = CarCastConfig.shared
+    @ObservedObject var config = DrivingModeConfig.shared
     @ObservedObject var manager = CarPlayManager.shared
 
     public init() {}

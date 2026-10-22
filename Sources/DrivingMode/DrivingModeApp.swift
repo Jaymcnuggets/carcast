@@ -1,8 +1,8 @@
 //
-//  CarCastApp.swift
-//  CarCast
+//  DrivingModeApp.swift
+//  DrivingMode
 //
-//  Main application entry point for CarCast multiplatform iOS/iPadOS head unit receiver.
+//  Main application entry point for DrivingMode multiplatform iOS/iPadOS head unit receiver.
 //
 
 import SwiftUI
@@ -10,13 +10,13 @@ import SwiftUI
 #if !SWIFT_PACKAGE
 @main
 #endif
-struct CarCastApp: App {
+struct DrivingModeApp: App {
     @StateObject private var manager = CarPlayManager.shared
-    @StateObject private var config = CarCastConfig.shared
+    @StateObject private var config = DrivingModeConfig.shared
     @StateObject private var telemetry = VehicleTelemetry.shared
 
     private var initialScreen: String? {
-        if let env = ProcessInfo.processInfo.environment["CARCAST_SCREEN"], !env.isEmpty {
+        if let env = ProcessInfo.processInfo.environment["DRIVINGMODE_SCREEN"] ?? ProcessInfo.processInfo.environment["CARCAST_SCREEN"], !env.isEmpty {
             return env.lowercased()
         }
         let args = ProcessInfo.processInfo.arguments

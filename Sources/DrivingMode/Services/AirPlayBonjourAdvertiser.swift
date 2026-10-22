@@ -43,7 +43,7 @@ public final class AirPlayBonjourAdvertiser: NSObject, NetServiceDelegate, @unch
         let apService = NetService(domain: "local.", type: "_airplay._tcp.", name: name, port: port)
         let apTxt: [String: String] = [
             "model": "CarPlay,1",
-            "srcvers": "377.17.24.6",
+            "srcvers": "509.11",
             "deviceid": macWithColons,
             "features": "0x4A7FDFD5,0x3C177FDE",
             "flags": "0x4",
@@ -88,7 +88,7 @@ public final class AirPlayBonjourAdvertiser: NSObject, NetServiceDelegate, @unch
         let cpTxt: [String: String] = [
             "name": name,
             "model": "CarPlay,1",
-            "srcvers": "377.17.24.6",
+            "srcvers": "509.11",
             "deviceid": macWithColons
         ]
         cpService.setTXTRecord(NetService.data(fromTXTRecord: cpTxt.mapValues { $0.data(using: .utf8) ?? Data() }))

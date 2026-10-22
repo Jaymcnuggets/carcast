@@ -1,8 +1,8 @@
 //
-//  CarCastConfig.swift
-//  CarCast
+//  DrivingModeConfig.swift
+//  DrivingMode
 //
-//  Central persistent configuration for CarCast receiver and vehicle settings.
+//  Central persistent configuration for DrivingMode receiver and vehicle settings.
 //
 
 import Foundation
@@ -88,14 +88,16 @@ public enum NightModeSetting: String, Codable, CaseIterable, Sendable {
 }
 
 @MainActor
-public final class CarCastConfig: ObservableObject {
-    public static let shared = CarCastConfig()
+public final class DrivingModeConfig: ObservableObject {
+    public static let shared = DrivingModeConfig()
 
     private let defaults = UserDefaults.standard
 
     @Published public var carName: String {
         didSet { defaults.set(carName, forKey: "carcast.car.name") }
     }
+
+    public let deviceId: String
 
     @Published public var selectedBrandId: String {
         didSet { defaults.set(selectedBrandId, forKey: "carcast.car.brand_id") }
@@ -175,17 +177,28 @@ public final class CarCastConfig: ObservableObject {
         didSet { defaults.set(wifiChannel, forKey: "carcast.wifi.channel") }
     }
 
+    public var deviceIdUInt64: UInt64 {
+        let clean = deviceId.replacingOccurrences(of: ":", with: "")
+        return UInt64(clean, radix: 16) ?? 170054366648252
+    }
+
     private init() {
-        // Generate or retrieve persistent unique car suffix
-        let defaultCarName: String
-        if let savedName = defaults.string(forKey: "carcast.car.name"), !savedName.isEmpty {
-            defaultCarName = savedName
+        let persistentDeviceId: String
+        if let savedId = defaults.string(forKey: "carcast.device.id"), !savedId.isEmpty, savedId.hasSuffix("57:BC") {
+            persistentDeviceId = savedId
         } else {
-            let uniqueHex = String(format: "%04X", Int.random(in: 0x1000...0xFFFF))
-            defaultCarName = "CarCast-\(uniqueHex)"
-            defaults.set(defaultCarName, forKey: "carcast.car.name")
+            persistentDeviceId = "9A:A9:72:31:57:BC"
+            defaults.set(persistentDeviceId, forKey: "carcast.device.id")
+            defaults.set(persistentDeviceId, forKey: "deviceID")
         }
-        self.carName = defaultCarName
+        self.deviceId = persistentDeviceId
+
+        // Canonical car name is always derived from the persistent deviceId
+        let cleanId = persistentDeviceId.replacingOccurrences(of: ":", with: "")
+        let suffix = cleanId.suffix(4).uppercased()
+        let canonicalName = "CarCast-\(suffix)"
+        self.carName = canonicalName
+        defaults.set(canonicalName, forKey: "carcast.car.name")
 
         self.selectedBrandId = defaults.string(forKey: "carcast.car.brand_id") ?? "lexus"
         self.customLogoLabel = defaults.string(forKey: "carcast.car.logo_label") ?? ""
@@ -241,7 +254,9 @@ public final class CarCastConfig: ObservableObject {
     }
 
     public func resetToDefaults() {
-        carName = "CarCast-\(String(format: "%04X", Int.random(in: 0x1000...0xFFFF)))"
+        let cleanId = deviceId.replacingOccurrences(of: ":", with: "")
+        let suffix = cleanId.suffix(4).uppercased()
+        carName = "DrivingMode-\(suffix)"
         selectedBrandId = "lexus"
         customLogoLabel = ""
         drivingPosition = .leftHandDrive

@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "BF3216C328329D8939712433"
-               BuildableName = "CarCast.app"
-               BlueprintName = "CarCast"
-               ReferencedContainer = "container:CarCast.xcodeproj">
+               BlueprintIdentifier = "2D6572D15B8074AAED18E22F"
+               BuildableName = "DrivingMode.app"
+               BlueprintName = "DrivingMode"
+               ReferencedContainer = "container:DrivingMode.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -32,10 +32,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "BF3216C328329D8939712433"
-            BuildableName = "CarCast.app"
-            BlueprintName = "CarCast"
-            ReferencedContainer = "container:CarCast.xcodeproj">
+            BlueprintIdentifier = "2D6572D15B8074AAED18E22F"
+            BuildableName = "DrivingMode.app"
+            BlueprintName = "DrivingMode"
+            ReferencedContainer = "container:DrivingMode.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -57,10 +57,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "BF3216C328329D8939712433"
-            BuildableName = "CarCast.app"
-            BlueprintName = "CarCast"
-            ReferencedContainer = "container:CarCast.xcodeproj">
+            BlueprintIdentifier = "2D6572D15B8074AAED18E22F"
+            BuildableName = "DrivingMode.app"
+            BlueprintName = "DrivingMode"
+            ReferencedContainer = "container:DrivingMode.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -76,10 +76,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "BF3216C328329D8939712433"
-            BuildableName = "CarCast.app"
-            BlueprintName = "CarCast"
-            ReferencedContainer = "container:CarCast.xcodeproj">
+            BlueprintIdentifier = "2D6572D15B8074AAED18E22F"
+            BuildableName = "DrivingMode.app"
+            BlueprintName = "DrivingMode"
+            ReferencedContainer = "container:DrivingMode.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>

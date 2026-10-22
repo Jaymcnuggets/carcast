@@ -14,7 +14,7 @@ import Combine
 public struct CarPlayUltraClusterView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var telemetry = VehicleTelemetry.shared
-    @ObservedObject var config = CarCastConfig.shared
+    @ObservedObject var config = DrivingModeConfig.shared
     @ObservedObject var manager = CarPlayManager.shared
     @ObservedObject var location = NativeLocationService.shared
 

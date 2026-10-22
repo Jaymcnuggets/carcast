@@ -13,7 +13,7 @@ import AVFoundation
 public struct CarPlayActiveScreenView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var manager = CarPlayManager.shared
-    @ObservedObject var config = CarCastConfig.shared
+    @ObservedObject var config = DrivingModeConfig.shared
 
     @State private var touchIndicatorPoint: CGPoint? = nil
 

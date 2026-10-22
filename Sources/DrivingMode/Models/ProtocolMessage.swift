@@ -17,6 +17,8 @@ public enum ProtocolCategory: String, Codable, CaseIterable, Sendable {
     case bluetooth = "Bluetooth"
     case system = "System"
 
+    public var title: String { rawValue }
+
     public var badgeColor: String {
         switch self {
         case .iap2: return "cyan"
@@ -35,6 +37,8 @@ public enum MessageDirection: String, Codable, Sendable {
     case rx = "RX ◀"
     case tx = "TX ▶"
     case `internal` = "INT ●"
+
+    public var title: String { rawValue }
 }
 
 public struct ProtocolMessage: Identifiable, Sendable {
@@ -106,6 +110,8 @@ public final class ProtocolLogger: ObservableObject {
             detail: detail,
             rawData: rawData
         )
+        print("[\(category.title)][\(direction.title)] \(title): \(detail)")
+        fflush(stdout)
         messages.append(msg)
         if messages.count > maxMessages {
             messages.removeFirst(messages.count - maxMessages)

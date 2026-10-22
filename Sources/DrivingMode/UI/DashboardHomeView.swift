@@ -1,15 +1,15 @@
 //
 //  DashboardHomeView.swift
-//  CarCast
+//  DrivingMode
 //
-//  Authentic CarCast Home View for iOS/iPadOS matching 1:1 ground-truth layout.
+//  Authentic DrivingMode Home View for iOS/iPadOS matching 1:1 ground-truth layout.
 //
 
 import SwiftUI
 
 public struct DashboardHomeView: View {
     @ObservedObject var manager = CarPlayManager.shared
-    @ObservedObject var config = CarCastConfig.shared
+    @ObservedObject var config = DrivingModeConfig.shared
 
     @State private var showingSettings: Bool = false
     @State private var showingConnect: Bool = false
@@ -72,6 +72,20 @@ public struct DashboardHomeView: View {
                         .font(.system(size: 17, weight: .regular))
                         .foregroundColor(statusColor)
 
+                    // Authentic Centered Settings Button directly below status
+                    Button {
+                        showingSettings = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 20, weight: .medium))
+                            Text("Settings")
+                                .font(.system(size: 19, weight: .regular))
+                        }
+                        .foregroundColor(Color(red: 0.0, green: 0.50, blue: 1.0))
+                    }
+                    .padding(.top, 22)
+
                     Spacer(minLength: 60)
 
                     // Bottom Navigation Buttons matching authentic screenshot
@@ -115,6 +129,13 @@ public struct DashboardHomeView: View {
             }
             .onChange(of: manager.isStreamingActive) { active in
                 showingActiveCarPlay = active
+            }
+            .onChange(of: manager.state) { newState in
+                if newState == .streaming {
+                    showingActiveCarPlay = true
+                } else if newState == .idle || newState == .error {
+                    showingActiveCarPlay = false
+                }
             }
             .onAppear {
                 WiFiNetworkService.shared.fetchCurrentSSID { ssid in
@@ -189,31 +210,16 @@ public struct DashboardHomeView: View {
 
     private var bottomButtonBar: some View {
         HStack(spacing: 0) {
-            // Settings Button (Always on Left)
-            Button {
-                showingSettings = true
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 18, weight: .medium))
-                    Text("Settings")
-                        .font(.system(size: 17, weight: .regular))
-                }
-                .foregroundColor(Color(red: 0.0, green: 0.50, blue: 1.0))
-            }
-
-            Spacer()
-
             if manager.state == .streaming {
-                // If CarPlay is connected: "Back to CarPlay" and "Stop"
+                // If CarPlay is connected: "Back to CarPlay" on left and "Stop" on right
                 Button {
                     showingActiveCarPlay = true
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "play.tv.fill")
-                            .font(.system(size: 18, weight: .medium))
+                            .font(.system(size: 20, weight: .medium))
                         Text("Back to CarPlay")
-                            .font(.system(size: 17, weight: .medium))
+                            .font(.system(size: 19, weight: .medium))
                     }
                     .foregroundColor(Color(red: 0.0, green: 0.50, blue: 1.0))
                 }
@@ -225,35 +231,50 @@ public struct DashboardHomeView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "stop.fill")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 18, weight: .semibold))
                         Text("Stop")
-                            .font(.system(size: 17, weight: .medium))
+                            .font(.system(size: 19, weight: .medium))
                     }
                     .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.23))
                 }
             } else if manager.state == .starting || manager.state == .waitingForPhone || manager.state == .connecting {
-                // While receiver active: show "Stop" button in red
-                Button {
-                    stopSession()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "stop.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Stop")
-                            .font(.system(size: 17, weight: .medium))
-                    }
-                    .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.23))
-                }
-            } else {
-                // Standard Idle State matching authentic screenshot: "Connect" and "This iPhone"
+                // While receiver active: show disabled "Connect" on left and active "Stop" in red on right
                 Button {
                     showingConnect = true
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "iphone.radiowaves.left.and.right")
-                            .font(.system(size: 18, weight: .medium))
+                            .font(.system(size: 20, weight: .medium))
                         Text("Connect")
-                            .font(.system(size: 17, weight: .regular))
+                            .font(.system(size: 19, weight: .regular))
+                    }
+                    .foregroundColor(Color(red: 0.0, green: 0.50, blue: 1.0).opacity(0.4))
+                }
+                .disabled(true)
+
+                Spacer()
+
+                Button {
+                    stopSession()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                        Text("Stop")
+                            .font(.system(size: 19, weight: .medium))
+                    }
+                    .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.23))
+                }
+            } else {
+                // Standard Idle State matching authentic screenshot 1:1: "Connect" on left and "This iPhone" on right
+                Button {
+                    showingConnect = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "iphone.radiowaves.left.and.right")
+                            .font(.system(size: 20, weight: .medium))
+                        Text("Connect")
+                            .font(.system(size: 19, weight: .regular))
                     }
                     .foregroundColor(Color(red: 0.0, green: 0.50, blue: 1.0))
                 }
@@ -265,9 +286,9 @@ public struct DashboardHomeView: View {
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "iphone")
-                            .font(.system(size: 18, weight: .medium))
+                            .font(.system(size: 20, weight: .medium))
                         Text("This iPhone")
-                            .font(.system(size: 17, weight: .regular))
+                            .font(.system(size: 19, weight: .regular))
                     }
                     .foregroundColor(Color(red: 0.0, green: 0.50, blue: 1.0))
                 }
@@ -287,21 +308,7 @@ public struct DashboardHomeView: View {
     // MARK: - Actions
 
     private func handleThisiPhoneTap() {
-        WiFiNetworkService.shared.requestAuthorizationAndFetchSSID { detectedSSID in
-            if let ssid = detectedSSID, !ssid.isEmpty {
-                config.wifiSSID = ssid
-                if let savedPwd = WiFiNetworkService.shared.getPassword(for: ssid), !savedPwd.isEmpty {
-                    config.wifiPassphrase = savedPwd
-                }
-            }
-
-            if config.wifiPassphrase.isEmpty {
-                enteredPassword = ""
-                showingPasswordAlert = true
-            } else {
-                startThisiPhoneSession()
-            }
-        }
+        startThisiPhoneSession()
     }
 
     private func startThisiPhoneSession() {

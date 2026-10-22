@@ -60,7 +60,25 @@ public final class AirPlayScreenReceiver: @unchecked Sendable {
         self.port = NWEndpoint.Port(rawValue: port) ?? .init(integerLiteral: 7100)
     }
 
+    public func resetSession() {
+        activeConnection?.cancel()
+        activeConnection = nil
+        formatDescription = nil
+        spsData = nil
+        ppsData = nil
+        delegate?.screenReceiverStateChanged(isActive: false)
+    }
+
     public func start() throws {
+        resetSession()
+
+        if let existing = listener, existing.state == .ready {
+            return
+        }
+
+        listener?.cancel()
+        listener = nil
+
         let params = NWParameters.tcp
         params.allowLocalEndpointReuse = true
         params.includePeerToPeer = true
@@ -91,11 +109,9 @@ public final class AirPlayScreenReceiver: @unchecked Sendable {
     }
 
     public func stop() {
-        activeConnection?.cancel()
-        activeConnection = nil
+        resetSession()
         listener?.cancel()
         listener = nil
-        delegate?.screenReceiverStateChanged(isActive: false)
     }
 
     private func handleNewConnection(_ connection: NWConnection) {

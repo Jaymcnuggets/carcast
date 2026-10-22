@@ -55,20 +55,22 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
         self.screenReceiver.delegate = self
         self.rtspServer.delegate = self
         self.iap2Engine.delegate = self
+
+        self.iap2Engine.onSendData = { data in
+            CarPlayBluetoothAdvertiser.shared.sendData(data)
+        }
+        CarPlayBluetoothAdvertiser.shared.onDataReceived = { [weak self] data in
+            self?.iap2Engine.handleIncomingBytes(data)
+        }
     }
 
     public func startReceiver() {
-        guard state == .idle || state == .error else { return }
+        if isStreamingActive { return }
         state = .starting
 
-        let config = CarCastConfig.shared
+        let config = DrivingModeConfig.shared
         let carName = config.carName
-        let r = UInt32.random(in: 0x10000000...0xFFFFFFFF)
-        let b2 = UInt8((r >> 24) & 0xFF)
-        let b3 = UInt8((r >> 16) & 0xFF)
-        let b4 = UInt8((r >> 8) & 0xFF)
-        let b5 = UInt8(r & 0xFF)
-        let deviceId = String(format: "02:00:%02X:%02X:%02X:%02X", b2, b3, b4, b5)
+        let deviceId = config.deviceId
 
         do {
             try rtspServer.start()
@@ -76,6 +78,9 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
             bonjourAdvertiser.startAdvertising(name: carName, deviceId: deviceId)
             CarPlayBluetoothAdvertiser.shared.startAdvertising(carName: carName)
             state = .waitingForPhone
+
+            // Send authentic CarPlay connection probe to trigger iOS carplayd
+            CarPlayControlClient.shared.triggerCarPlayConnect(deviceId: deviceId)
 
             ProtocolLogger.shared.log(
                 category: .system,
@@ -148,10 +153,12 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
     public func stopReceiver() {
         simulationTimer?.invalidate()
         simulationTimer = nil
+        CarPlayControlClient.shared.cancel()
         bonjourAdvertiser.stopAdvertising()
         CarPlayBluetoothAdvertiser.shared.stopAdvertising()
         screenReceiver.stop()
         rtspServer.stop()
+        iap2Engine.reset()
 
         state = .idle
         connectedClientName = nil
@@ -207,6 +214,10 @@ extension CarPlayManager: AirPlayScreenReceiverDelegate {
 
     nonisolated public func screenReceiverStateChanged(isActive: Bool) {
         Task { @MainActor in
+            guard self.state != .idle else {
+                self.isStreamingActive = false
+                return
+            }
             self.isStreamingActive = isActive
             if isActive {
                 self.state = .streaming
@@ -227,6 +238,7 @@ extension CarPlayManager: RTSPServerDelegate {
 
     nonisolated public func rtspServerDidEndSession() {
         Task { @MainActor in
+            guard self.state != .idle else { return }
             self.connectedClientName = nil
             self.isStreamingActive = false
             self.state = .waitingForPhone
@@ -246,6 +258,12 @@ extension CarPlayManager: iAP2ProtocolDelegate {
     nonisolated public func iap2DidReceiveIdentificationRejected() {
         Task { @MainActor in
             self.state = .error
+        }
+    }
+
+    nonisolated public func iap2DidReceiveRequestStartCarPlay() {
+        Task { @MainActor in
+            self.state = .connecting
         }
     }
 
@@ -282,6 +300,7 @@ extension CarPlayManager: iAP2ProtocolDelegate {
 
     nonisolated public func iap2SessionEnded() {
         Task { @MainActor in
+            guard self.state != .idle else { return }
             self.isStreamingActive = false
             self.state = .waitingForPhone
         }

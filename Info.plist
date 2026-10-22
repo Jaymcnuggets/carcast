@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>CarCast</string>
+	<string>DrivingMode</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
+	<string>DrivingMode</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -44,7 +44,7 @@
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>CarCast uses the local network to discover and receive wireless CarPlay screen and audio streams from Apple devices.</string>
+	<string>DrivingMode uses the local network to discover and receive wireless CarPlay screen and audio streams from Apple devices.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_airplay._tcp</string>
@@ -57,50 +57,16 @@
 	<array>
 		<string>audio</string>
 		<string>fetch</string>
+		<string>bluetooth-peripheral</string>
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>CarCast requires location access to determine the name of your current Wi-Fi network so Apple CarPlay can register and connect seamlessly, and to provide vehicle telemetry.</string>
+	<string>DrivingMode requires location access to determine the name of your current Wi-Fi network so Apple CarPlay can register and connect seamlessly, and to provide vehicle telemetry.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>CarCast uses Bluetooth to discover and establish wireless CarPlay connections.</string>
+	<string>DrivingMode uses Bluetooth to discover and establish wireless CarPlay connections.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>CarCast uses Bluetooth to discover and establish wireless CarPlay connections.</string>
+	<string>DrivingMode uses Bluetooth to discover and establish wireless CarPlay connections.</string>
 	<key>NSAppleMusicUsageDescription</key>
-	<string>CarCast accesses your media library to display and control native Apple Music playback.</string>
-	<key>UIApplicationSceneManifest</key>
-	<dict>
-		<key>UIApplicationSupportsMultipleScenes</key>
-		<true/>
-		<key>UISceneConfigurations</key>
-		<dict>
-			<key>CPTemplateApplicationSceneSessionRoleApplication</key>
-			<array>
-				<dict>
-					<key>UISceneConfigurationName</key>
-					<string>CarPlay-Configuration</string>
-					<key>UISceneDelegateClassName</key>
-					<string>CarCast.CarPlaySceneDelegate</string>
-				</dict>
-			</array>
-			<key>CPTemplateApplicationDashboardSceneSessionRoleApplication</key>
-			<array>
-				<dict>
-					<key>UISceneConfigurationName</key>
-					<string>CarPlay-Dashboard-Configuration</string>
-					<key>UISceneDelegateClassName</key>
-					<string>CarCast.CarPlaySceneDelegate</string>
-				</dict>
-			</array>
-			<key>CPTemplateApplicationInstrumentClusterSceneSessionRoleApplication</key>
-			<array>
-				<dict>
-					<key>UISceneConfigurationName</key>
-					<string>CarPlay-Cluster-Configuration</string>
-					<key>UISceneDelegateClassName</key>
-					<string>CarCast.CarPlaySceneDelegate</string>
-				</dict>
-			</array>
-		</dict>
-	</dict>
+	<string>DrivingMode accesses your media library to display and control native Apple Music playback.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

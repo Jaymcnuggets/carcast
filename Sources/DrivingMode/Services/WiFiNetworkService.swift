@@ -27,11 +27,35 @@ public final class WiFiNetworkService: NSObject, ObservableObject, CLLocationMan
 
     private let locationManager = CLLocationManager()
     private let pathMonitor = NWPathMonitor(requiredInterfaceType: .wifi)
-    private let monitorQueue = DispatchQueue(label: "dev.unordinarylabs.CarCast.WiFiMonitor", qos: .utility)
+    private let monitorQueue = DispatchQueue(label: "dev.unordinarylabs.DrivingMode.WiFiMonitor", qos: .utility)
 
     @Published public var currentSSID: String? = nil
     @Published public var isConnectedToWiFi: Bool = false
     @Published public var isLocationAuthorized: Bool = false
+
+    public var currentIPAddress: String? {
+        var address: String?
+        var ifaddr: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&ifaddr) == 0, let firstAddr = ifaddr else { return nil }
+        defer { freeifaddrs(ifaddr) }
+
+        for ptr in sequence(first: firstAddr, next: { $0.pointee.ifa_next }) {
+            let flags = Int32(ptr.pointee.ifa_flags)
+            let addr = ptr.pointee.ifa_addr.pointee
+
+            // Check for running IPv4 interface that is up and not loopback
+            if (flags & (IFF_UP | IFF_RUNNING | IFF_LOOPBACK)) == (IFF_UP | IFF_RUNNING) {
+                if addr.sa_family == UInt8(AF_INET) {
+                    var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                    if getnameinfo(ptr.pointee.ifa_addr, socklen_t(addr.sa_len), &hostname, socklen_t(hostname.count), nil, 0, NI_NUMERICHOST) == 0 {
+                        address = String(cString: hostname)
+                        break
+                    }
+                }
+            }
+        }
+        return address
+    }
 
     private var pendingSSIDCompletions: [(String?) -> Void] = []
     private let lock = NSLock()
@@ -179,8 +203,8 @@ public final class WiFiNetworkService: NSObject, ObservableObject, CLLocationMan
 
     @MainActor
     private func syncWithConfig(ssid: String) {
-        let config = CarCastConfig.shared
-        if config.wifiSSID.isEmpty || config.wifiSSID == "CarCast-WiFi" || config.wifiSSID != ssid {
+        let config = DrivingModeConfig.shared
+        if config.wifiSSID.isEmpty || config.wifiSSID == "DrivingMode-WiFi" || config.wifiSSID != ssid {
             config.wifiSSID = ssid
             if let savedPassword = getPassword(for: ssid), !savedPassword.isEmpty {
                 config.wifiPassphrase = savedPassword
@@ -197,7 +221,7 @@ public final class WiFiNetworkService: NSObject, ObservableObject, CLLocationMan
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: ssid,
-            kSecAttrService as String: "dev.unordinarylabs.CarCast.WiFi",
+            kSecAttrService as String: "dev.unordinarylabs.DrivingMode.WiFi",
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
@@ -218,7 +242,7 @@ public final class WiFiNetworkService: NSObject, ObservableObject, CLLocationMan
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: ssid,
-            kSecAttrService as String: "dev.unordinarylabs.CarCast.WiFi"
+            kSecAttrService as String: "dev.unordinarylabs.DrivingMode.WiFi"
         ]
 
         SecItemDelete(query as CFDictionary)
@@ -236,7 +260,7 @@ public final class WiFiNetworkService: NSObject, ObservableObject, CLLocationMan
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: ssid,
-            kSecAttrService as String: "dev.unordinarylabs.CarCast.WiFi"
+            kSecAttrService as String: "dev.unordinarylabs.DrivingMode.WiFi"
         ]
         SecItemDelete(query as CFDictionary)
     }

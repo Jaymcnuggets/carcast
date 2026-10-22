@@ -26,7 +26,24 @@ public final class RTSPServer: @unchecked Sendable {
         self.port = NWEndpoint.Port(rawValue: port) ?? .init(integerLiteral: 7000)
     }
 
+    public func resetSession() {
+        for conn in activeConnections {
+            conn.cancel()
+        }
+        activeConnections.removeAll()
+        delegate?.rtspServerDidEndSession()
+    }
+
     public func start() throws {
+        resetSession()
+
+        if let existing = listener, existing.state == .ready {
+            return
+        }
+
+        listener?.cancel()
+        listener = nil
+
         let params = NWParameters.tcp
         params.allowLocalEndpointReuse = true
         params.includePeerToPeer = true
@@ -57,10 +74,7 @@ public final class RTSPServer: @unchecked Sendable {
     }
 
     public func stop() {
-        for conn in activeConnections {
-            conn.cancel()
-        }
-        activeConnections.removeAll()
+        resetSession()
         listener?.cancel()
         listener = nil
     }
@@ -124,6 +138,8 @@ public final class RTSPServer: @unchecked Sendable {
         switch method {
         case "OPTIONS":
             handleOptions(cseq: cseq, connection: connection)
+        case "GET":
+            handleGet(uri: uri, cseq: cseq, connection: connection)
         case "ANNOUNCE":
             handleAnnounce(cseq: cseq, lines: lines, connection: connection)
         case "SETUP":
@@ -137,6 +153,94 @@ public final class RTSPServer: @unchecked Sendable {
         case "POST":
             handlePost(cseq: cseq, uri: uri, data: data, connection: connection)
         default:
+            sendResponse(status: "200 OK", cseq: cseq, headers: [:], body: nil, connection: connection)
+        }
+    }
+
+    private func handleGet(uri: String, cseq: String, connection: NWConnection) {
+        if uri.contains("/info") {
+            let defaults = UserDefaults.standard
+            let carName = defaults.string(forKey: "carcast.car.name") ?? "DrivingMode"
+            let deviceId = defaults.string(forKey: "carcast.device.id") ?? "9A:A9:72:31:CA:9A"
+
+            let cleanDeviceId = deviceId.replacingOccurrences(of: ":", with: "").uppercased()
+            let macWithColons: String
+            if cleanDeviceId.count == 12 {
+                macWithColons = stride(from: 0, to: 12, by: 2)
+                    .map { cleanDeviceId[cleanDeviceId.index(cleanDeviceId.startIndex, offsetBy: $0)..<cleanDeviceId.index(cleanDeviceId.startIndex, offsetBy: $0 + 2)] }
+                    .joined(separator: ":")
+            } else {
+                macWithColons = deviceId
+            }
+
+            let infoDict: [String: Any] = [
+                "sourceVersion": "509.11",
+                "features": 0x4A7FDFD5,
+                "statusFlags": 4,
+                "model": "CarPlay,1",
+                "manufacturer": "Apple",
+                "deviceID": macWithColons,
+                "name": carName,
+                "rightHandDrive": false,
+                "keepAliveLowPower": false,
+                "keepAliveSendStatsAsBody": false,
+                "modes": [
+                    "resources": [
+                        ["resourceID": 1, "transferType": 1, "transferPriority": 100, "takeConstraint": 100, "borrowConstraint": 100, "unborrowConstraint": 100],
+                        ["resourceID": 2, "transferType": 1, "transferPriority": 100, "takeConstraint": 100, "borrowConstraint": 100, "unborrowConstraint": 100]
+                    ],
+                    "appStates": [
+                        ["appStateID": 2, "state": false],
+                        ["appStateID": 1, "speechMode": -1],
+                        ["appStateID": 3, "state": false]
+                    ]
+                ],
+                "displays": [
+                    [
+                        "uuid": "b7e6c5a0-1111-4000-8000-000000000001",
+                        "type": 110,
+                        "maxFPS": 60,
+                        "widthPixels": 1280,
+                        "heightPixels": 720,
+                        "widthPhysical": 150,
+                        "heightPhysical": 84,
+                        "features": 10,
+                        "primaryInputDevice": 1,
+                        "viewAreas": [
+                            [
+                                "widthPixels": 1280,
+                                "heightPixels": 720,
+                                "originXPixels": 0,
+                                "originYPixels": 0,
+                                "safeArea": [
+                                    "widthPixels": 1280,
+                                    "heightPixels": 720,
+                                    "originXPixels": 0,
+                                    "originYPixels": 0,
+                                    "drawUIOutsideSafeArea": true
+                                ]
+                            ]
+                        ],
+                        "initialViewArea": 0
+                    ]
+                ],
+                "hidDevices": [
+                    ["uuid": "b7e6c5a0-1111-4000-8000-000000000001", "hidDeviceType": 1]
+                ]
+            ]
+
+            let bodyData: Data
+            if let serialized = try? PropertyListSerialization.data(fromPropertyList: infoDict, format: .binary, options: 0) {
+                bodyData = serialized
+            } else {
+                bodyData = Data()
+            }
+
+            let headers = [
+                "Content-Type": "application/x-apple-binary-plist"
+            ]
+            sendResponse(status: "200 OK", cseq: cseq, headers: headers, body: bodyData, connection: connection)
+        } else {
             sendResponse(status: "200 OK", cseq: cseq, headers: [:], body: nil, connection: connection)
         }
     }
@@ -207,7 +311,7 @@ public final class RTSPServer: @unchecked Sendable {
         connection: NWConnection
     ) {
         var resp = "RTSP/1.0 \(status)\r\n"
-        resp += "Server: AirPlay/377.17.24.6 (CarCast)\r\n"
+        resp += "Server: AirTunes/509.11\r\n"
         resp += "CSeq: \(cseq)\r\n"
 
         for (k, v) in headers {
@@ -218,11 +322,11 @@ public final class RTSPServer: @unchecked Sendable {
             resp += "Content-Length: \(body.count)\r\n\r\n"
             var respData = resp.data(using: .utf8) ?? Data()
             respData.append(body)
-            connection.send(content: respData, completion: .idempotent)
+            connection.send(content: respData, contentContext: .defaultMessage, isComplete: false, completion: .contentProcessed { _ in })
         } else {
             resp += "Content-Length: 0\r\n\r\n"
             let respData = resp.data(using: .utf8) ?? Data()
-            connection.send(content: respData, completion: .idempotent)
+            connection.send(content: respData, contentContext: .defaultMessage, isComplete: false, completion: .contentProcessed { _ in })
         }
 
         Task { @MainActor in

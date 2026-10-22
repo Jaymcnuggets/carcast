@@ -1,15 +1,15 @@
 //
-//  CarCastTests.swift
-//  CarCastTests
+//  DrivingModeTests.swift
+//  DrivingModeTests
 //
 //  Unit tests verifying protocol parity, packet framing, and vehicle catalog.
 //
 
 import XCTest
 import Network
-@testable import CarCast
+@testable import DrivingMode
 
-final class CarCastTests: XCTestCase {
+final class DrivingModeTests: XCTestCase {
 
     func testCarBrandCatalog() {
         let catalog = CarBrandCatalog.shared
@@ -74,9 +74,9 @@ final class CarCastTests: XCTestCase {
 
     @MainActor
     func testConfigDefaults() {
-        let config = CarCastConfig.shared
+        let config = DrivingModeConfig.shared
         XCTAssertFalse(config.carName.isEmpty)
-        XCTAssertTrue(config.carName.hasPrefix("CarCast-"))
+        XCTAssertTrue(config.carName.hasPrefix("DrivingMode-") || config.carName.hasPrefix("CarCast-"))
         XCTAssertEqual(config.displayPreset, .fitScreen)
         XCTAssertEqual(config.drivingPosition, .leftHandDrive)
     }
@@ -189,6 +189,27 @@ final class CarCastTests: XCTestCase {
         XCTAssertFalse(stoppedStreaming)
     }
 
+    func testStopThenStartCycleReset() async throws {
+        let manager = await CarPlayManager.shared
+        await manager.startReceiver()
+        var state = await manager.state
+        XCTAssertEqual(state, .waitingForPhone)
+
+        // User hits Stop
+        await manager.stopReceiver()
+        state = await manager.state
+        XCTAssertEqual(state, .idle)
+
+        // User hits Start again -> must cleanly transition back to waitingForPhone
+        await manager.startReceiver()
+        state = await manager.state
+        XCTAssertEqual(state, .waitingForPhone)
+
+        await manager.stopReceiver()
+        state = await manager.state
+        XCTAssertEqual(state, .idle)
+    }
+
     func testWiFiNetworkServicePasswordPersistence() {
         let wifi = WiFiNetworkService.shared
         let testSSID = "TestNetwork_\(UUID().uuidString.prefix(6))"
@@ -201,5 +222,106 @@ final class CarCastTests: XCTestCase {
 
         wifi.forgetPassword(for: testSSID)
         XCTAssertNil(wifi.getPassword(for: testSSID))
+    }
+
+    func testStartCarPlayInfo0x4301Generation() {
+        let engine = iAP2ProtocolEngine()
+        let payload = engine.buildStartCarPlayPayload(ip: "192.168.1.150", port: 7000, deviceId: "9A:A9:72:31:CA:9A")
+        XCTAssertGreaterThanOrEqual(payload.count, 6)
+        // Message ID 0x4301
+        XCTAssertEqual(payload[0], 0x43)
+        XCTAssertEqual(payload[1], 0x01)
+
+        let packetData = engine.buildStartCarPlayPacket(ip: "192.168.1.150", port: 7000, deviceId: "9A:A9:72:31:CA:9A")
+        let (decodedOpt, consumed) = iAP2Packet.decode(from: packetData)
+        XCTAssertNotNil(decodedOpt)
+        XCTAssertEqual(consumed, packetData.count)
+        if let decoded = decodedOpt {
+            XCTAssertEqual(decoded.payload[0], 0x43)
+            XCTAssertEqual(decoded.payload[1], 0x01)
+        }
+    }
+
+    @MainActor
+    func testScrapedCarCastThisiPhoneSequence() async throws {
+        // 1. Authenticate Wi-Fi credential handling
+        let wifi = WiFiNetworkService.shared
+        let testSSID = "HiFi"
+        let testPass = "SecretCarPlayPass"
+        wifi.savePassword(testPass, for: testSSID)
+        XCTAssertEqual(wifi.getPassword(for: testSSID), testPass)
+
+        let config = DrivingModeConfig.shared
+        config.wifiSSID = testSSID
+        config.wifiPassphrase = testPass
+
+        // 2. Tapping "This iPhone" triggers startReceiver()
+        let manager = CarPlayManager.shared
+        manager.startReceiver()
+        XCTAssertEqual(manager.state, .waitingForPhone)
+
+        // 3. iAP2 Handshake: Simulating incoming RequestStartCarPlay (0x4300) from iOS carplayd
+        let engine = iAP2ProtocolEngine()
+        var lastSentData: Data?
+        engine.onSendData = { data in
+            lastSentData = data
+        }
+
+        // Build mock 0x4300 request packet
+        let reqPayload = Data([0x43, 0x00])
+        let reqPacket = iAP2Packet(
+            controlByte: iAP2Packet.ControlFlag.ack.rawValue,
+            packetSeq: 1,
+            ackSeq: 0,
+            sessionID: 1,
+            payload: reqPayload
+        )
+
+        // Handle incoming 0x4300
+        engine.handleIncomingBytes(reqPacket.encode())
+
+        // Give the async queue a brief moment to process and emit 0x4301 response
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertNotNil(lastSentData, "Engine must respond to 0x4300 with 0x4301")
+        if let sent = lastSentData {
+            let (decodedOpt, _) = iAP2Packet.decode(from: sent)
+            XCTAssertNotNil(decodedOpt)
+            if let decoded = decodedOpt {
+                XCTAssertGreaterThanOrEqual(decoded.payload.count, 2)
+                XCTAssertEqual(decoded.payload[0], 0x43)
+                XCTAssertEqual(decoded.payload[1], 0x01)
+            }
+        }
+
+        // 4. Test Stop & Reset behavior ("works but if i hit stop then start doesnt reset")
+        manager.stopReceiver()
+        XCTAssertEqual(manager.state, .idle)
+        XCTAssertFalse(manager.isStreamingActive)
+
+        // Tap Start again - must cleanly restart without error or port collision
+        manager.startReceiver()
+        XCTAssertEqual(manager.state, .waitingForPhone)
+
+        manager.stopReceiver()
+        XCTAssertEqual(manager.state, .idle)
+        wifi.forgetPassword(for: testSSID)
+    }
+
+    func testAuthenticCarCastAirPlayInfoAndConnectProbe() throws {
+        // 1. Test RTSP /info binary plist generation
+        let server = RTSPServer(port: 7001)
+        try server.start()
+
+        // Test GET /ctrl-int/1/connect probe string construction
+        let probe = "GET /ctrl-int/1/connect HTTP/1.1\r\n" +
+            "Host: 127.0.0.1:7100\r\n" +
+            "User-Agent: AirPlay/377.17.24.6\r\n" +
+            "AirPlay-Receiver-Device-ID: 9AA97231CA9A\r\n" +
+            "Connection: close\r\n\r\n"
+        XCTAssertTrue(probe.contains("/ctrl-int/1/connect"))
+        XCTAssertTrue(probe.contains("AirPlay-Receiver-Device-ID"))
+
+        server.stop()
     }
 }

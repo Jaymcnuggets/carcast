@@ -2,29 +2,29 @@
 import PackageDescription
 
 let package = Package(
-    name: "CarCast",
+    name: "DrivingMode",
     platforms: [
         .iOS(.v16),
         .macOS(.v14)
     ],
     products: [
         .library(
-            name: "CarCast",
-            targets: ["CarCast"]
+            name: "DrivingMode",
+            targets: ["DrivingMode"]
         )
     ],
     targets: [
         .target(
-            name: "CarCast",
-            path: "Sources/CarCast",
+            name: "DrivingMode",
+            path: "Sources/DrivingMode",
             resources: [
                 .process("../../Resources")
             ]
         ),
         .testTarget(
-            name: "CarCastTests",
-            dependencies: ["CarCast"],
-            path: "Tests/CarCastTests"
+            name: "DrivingModeTests",
+            dependencies: ["DrivingMode"],
+            path: "Tests/DrivingModeTests"
         )
     ]
 )

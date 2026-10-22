@@ -118,6 +118,7 @@ public struct iAP2Packet {
 public protocol iAP2ProtocolDelegate: AnyObject, Sendable {
     func iap2DidReceiveIdentificationAccepted()
     func iap2DidReceiveIdentificationRejected()
+    func iap2DidReceiveRequestStartCarPlay()
     func iap2DidReceiveNowPlayingUpdate(title: String, artist: String, album: String, duration: Double, elapsed: Double)
     func iap2DidReceiveArtwork(data: Data)
     func iap2DidRequestUI(mode: String?)
@@ -126,13 +127,22 @@ public protocol iAP2ProtocolDelegate: AnyObject, Sendable {
 
 public final class iAP2ProtocolEngine: @unchecked Sendable {
     public weak var delegate: iAP2ProtocolDelegate?
+    public var onSendData: ((Data) -> Void)?
 
     private var txSeq: UInt8 = 0
     private var rxSeq: UInt8 = 0
     private var isConnected: Bool = false
-    private let queue = DispatchQueue(label: "dev.unordinarylabs.carcast.iap2", qos: .userInteractive)
+    private let queue = DispatchQueue(label: "dev.unordinarylabs.drivingmode.iap2", qos: .userInteractive)
 
     public init() {}
+
+    public func reset() {
+        queue.async { [weak self] in
+            self?.txSeq = 0
+            self?.rxSeq = 0
+            self?.isConnected = false
+        }
+    }
 
     public func buildIdentificationPayload(
         carName: String,
@@ -194,6 +204,68 @@ public final class iAP2ProtocolEngine: @unchecked Sendable {
         return payload
     }
 
+    public func buildStartCarPlayPayload(ip: String, port: UInt16 = 7000, deviceId: String = "02:00:11:22:33:44") -> Data {
+        var payload = Data()
+        payload.append(0x43)
+        payload.append(0x01)
+
+        // Param 0x0002: Port (4-byte UInt32 big-endian matching authentic libcarcast disassembly at 0x32b088)
+        var portBe = UInt32(port).bigEndian
+        let portData = Data(bytes: &portBe, count: 4)
+        appendParam(to: &payload, paramId: 0x0002, data: portData)
+
+        // Param 0x0003: IP Address (null-terminated string matching 0x32b0bc)
+        appendNullTerminatedParam(to: &payload, paramId: 0x0003, string: ip)
+
+        // Param 0x0004: Device ID (null-terminated string matching 0x32b0e0)
+        appendNullTerminatedParam(to: &payload, paramId: 0x0004, string: deviceId)
+
+        // Param 0x0006: Source Version matching 0x32b150
+        appendNullTerminatedParam(to: &payload, paramId: 0x0006, string: "377.17.24.6")
+
+        return payload
+    }
+
+    public func buildStartCarPlayPacket(ip: String, port: UInt16 = 7000, deviceId: String = "02:00:11:22:33:44") -> Data {
+        txSeq = (txSeq &+ 1)
+        let payload = buildStartCarPlayPayload(ip: ip, port: port, deviceId: deviceId)
+        let packet = iAP2Packet(
+            controlByte: iAP2Packet.ControlFlag.ack.rawValue,
+            packetSeq: txSeq,
+            ackSeq: rxSeq,
+            sessionID: 1,
+            payload: payload
+        )
+        return packet.encode()
+    }
+
+    public func buildIdentificationPacket(
+        carName: String,
+        macAddress: String,
+        wifiSSID: String,
+        wifiPassword: String,
+        wifiChannel: Int,
+        linkLocalIPv6: String
+    ) -> Data {
+        txSeq = (txSeq &+ 1)
+        let payload = buildIdentificationPayload(
+            carName: carName,
+            macAddress: macAddress,
+            wifiSSID: wifiSSID,
+            wifiPassword: wifiPassword,
+            wifiChannel: wifiChannel,
+            linkLocalIPv6: linkLocalIPv6
+        )
+        let packet = iAP2Packet(
+            controlByte: iAP2Packet.ControlFlag.ack.rawValue,
+            packetSeq: txSeq,
+            ackSeq: rxSeq,
+            sessionID: 1,
+            payload: payload
+        )
+        return packet.encode()
+    }
+
     public func handleIncomingBytes(_ data: Data) {
         queue.async { [weak self] in
             guard let self = self else { return }
@@ -225,8 +297,9 @@ public final class iAP2ProtocolEngine: @unchecked Sendable {
 
         // Check for control flags
         if (packet.controlByte & iAP2Packet.ControlFlag.syn.rawValue) != 0 {
-            // Send SYN+ACK
+            // Send SYN+ACK and send Identification
             sendAck()
+            sendIdentification()
             return
         }
 
@@ -236,7 +309,7 @@ public final class iAP2ProtocolEngine: @unchecked Sendable {
         switch msgId {
         case 0x1D02: // IdentificationAccepted
             Task { @MainActor in
-                ProtocolLogger.shared.log(category: .iap2, direction: .rx, title: "IdentificationAccepted", detail: "Phone accepted CarCast accessory")
+                ProtocolLogger.shared.log(category: .iap2, direction: .rx, title: "IdentificationAccepted", detail: "Phone accepted DrivingMode accessory")
             }
             delegate?.iap2DidReceiveIdentificationAccepted()
 
@@ -245,6 +318,13 @@ public final class iAP2ProtocolEngine: @unchecked Sendable {
                 ProtocolLogger.shared.log(category: .iap2, direction: .rx, title: "IdentificationRejected", detail: "Phone rejected identification")
             }
             delegate?.iap2DidReceiveIdentificationRejected()
+
+        case 0x4300: // RequestStartCarPlay
+            Task { @MainActor in
+                ProtocolLogger.shared.log(category: .iap2, direction: .rx, title: "RequestStartCarPlay (0x4300)", detail: "Phone requested CarPlay start")
+                self.sendStartCarPlayInfo()
+            }
+            delegate?.iap2DidReceiveRequestStartCarPlay()
 
         case 0x4E01: // NowPlayingUpdate
             parseNowPlaying(packet.payload.subdata(in: 2..<packet.payload.count))
@@ -259,6 +339,43 @@ public final class iAP2ProtocolEngine: @unchecked Sendable {
         default:
             break
         }
+    }
+
+    public func sendIdentification() {
+        Task { @MainActor in
+            let config = DrivingModeConfig.shared
+            let packetData = self.buildIdentificationPacket(
+                carName: config.carName,
+                macAddress: config.deviceId,
+                wifiSSID: config.wifiSSID,
+                wifiPassword: config.wifiPassphrase,
+                wifiChannel: config.wifiChannel,
+                linkLocalIPv6: "fe80::1"
+            )
+            self.onSendData?(packetData)
+            ProtocolLogger.shared.log(
+                category: .iap2,
+                direction: .tx,
+                title: "Identification (0x1D01)",
+                detail: "Sent identification to phone for \(config.carName)",
+                rawData: packetData
+            )
+        }
+    }
+
+    @MainActor
+    public func sendStartCarPlayInfo(ip: String? = nil, port: UInt16 = 7000) {
+        let targetIP = ip ?? WiFiNetworkService.shared.currentIPAddress ?? "127.0.0.1"
+        let deviceId = DrivingModeConfig.shared.deviceId
+        let packetData = buildStartCarPlayPacket(ip: targetIP, port: port, deviceId: deviceId)
+        onSendData?(packetData)
+        ProtocolLogger.shared.log(
+            category: .iap2,
+            direction: .tx,
+            title: "StartCarPlayInfo (0x4301)",
+            detail: "Responding to 0x4300: ip=\(targetIP) port=\(port) deviceID=\(deviceId)",
+            rawData: packetData
+        )
     }
 
     private func parseNowPlaying(_ data: Data) {
@@ -308,6 +425,7 @@ public final class iAP2ProtocolEngine: @unchecked Sendable {
             sessionID: 1
         )
         let encoded = ack.encode()
+        onSendData?(encoded)
         Task { @MainActor in
             ProtocolLogger.shared.log(category: .iap2, direction: .tx, title: "iAP2 ACK", detail: "AckSeq: \(rxSeq)", rawData: encoded)
         }
@@ -315,6 +433,13 @@ public final class iAP2ProtocolEngine: @unchecked Sendable {
 
     private func appendParam(to data: inout Data, paramId: UInt16, string: String) {
         if let sData = string.data(using: .utf8) {
+            appendParam(to: &data, paramId: paramId, data: sData)
+        }
+    }
+
+    private func appendNullTerminatedParam(to data: inout Data, paramId: UInt16, string: String) {
+        if var sData = string.data(using: .utf8) {
+            sData.append(0x00)
             appendParam(to: &data, paramId: paramId, data: sData)
         }
     }

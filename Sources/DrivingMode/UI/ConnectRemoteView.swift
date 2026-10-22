@@ -52,11 +52,11 @@ public struct ConnectRemoteView: View {
                         }
                     }
 
-                    Text("Searching for CarCast screens…")
+                    Text("Searching for DrivingMode screens…")
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .foregroundColor(.white)
 
-                    Text("Ensure the iPad or second device has CarCast open and is on the same Wi-Fi network.")
+                    Text("Ensure the iPad or second device has DrivingMode open and is on the same Wi-Fi network.")
                         .font(.system(size: 13, design: .rounded))
                         .foregroundColor(.gray)
                         .multilineTextAlignment(.center)

@@ -46,6 +46,8 @@ public struct RawVideoCanvasView: UIViewRepresentable {
     public func updateUIView(_ uiView: SampleBufferContainerView, context: Context) {
         if let buffer = manager.lastSampleBuffer {
             uiView.enqueue(buffer)
+        } else {
+            uiView.flush()
         }
     }
 }
@@ -54,6 +56,11 @@ public final class SampleBufferContainerView: UIView {
     public var onTouchEvent: ((Int, Double, Double) -> Void)?
 
     private let sampleLayer = AVSampleBufferDisplayLayer()
+
+    public func flush() {
+        sampleLayer.flush()
+        sampleLayer.stopRequestingMediaData()
+    }
 
     public override init(frame: CGRect) {
         super.init(frame: frame)

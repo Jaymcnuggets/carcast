@@ -36,6 +36,8 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
     @Published public private(set) var currentStreamResolution: CGSize = .zero
     @Published public private(set) var isStreamingActive: Bool = false
     @Published public var lastSampleBuffer: CMSampleBuffer? = nil
+    @Published public private(set) var totalFramesReceived: Int = 0
+    @Published public private(set) var lastFrameTime: Date? = nil
 
     private let rtspServer: RTSPServer
     private let screenReceiver: AirPlayScreenReceiver
@@ -171,6 +173,8 @@ extension CarPlayManager: AirPlayScreenReceiverDelegate {
     nonisolated public func screenReceiverDidReceiveSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
         Task { @MainActor in
             self.lastSampleBuffer = sampleBuffer
+            self.totalFramesReceived += 1
+            self.lastFrameTime = Date()
         }
     }
 

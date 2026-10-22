@@ -29,6 +29,7 @@ public final class RTSPServer: @unchecked Sendable {
     public func start() throws {
         let params = NWParameters.tcp
         params.allowLocalEndpointReuse = true
+        params.includePeerToPeer = true
 
         let listener = try NWListener(using: params, on: port)
         self.listener = listener

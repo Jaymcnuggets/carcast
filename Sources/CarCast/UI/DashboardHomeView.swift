@@ -14,16 +14,12 @@ public struct DashboardHomeView: View {
     @State private var showingSettings: Bool = false
     @State private var showingConnect: Bool = false
     @State private var showingActiveCarPlay: Bool = false
-    @State private var isStarting: Bool = false
     @State private var showingPasswordAlert: Bool = false
     @State private var enteredPassword: String = ""
 
     public init() {}
 
     private var statusText: String {
-        if isStarting {
-            return "Starting…"
-        }
         switch manager.state {
         case .idle:
             return "Waiting for iPhone"
@@ -118,12 +114,7 @@ public struct DashboardHomeView: View {
                 Text("iOS requires the network password to register this car for CarPlay on \(networkName). It is stored securely on this iPhone.")
             }
             .onChange(of: manager.isStreamingActive) { active in
-                if active {
-                    isStarting = false
-                    showingActiveCarPlay = true
-                } else {
-                    showingActiveCarPlay = false
-                }
+                showingActiveCarPlay = active
             }
             .onAppear {
                 WiFiNetworkService.shared.fetchCurrentSSID { ssid in
@@ -240,8 +231,8 @@ public struct DashboardHomeView: View {
                     }
                     .foregroundColor(Color(red: 1.0, green: 0.27, blue: 0.23))
                 }
-            } else if isStarting || manager.state == .starting || manager.state == .connecting {
-                // While starting: show "Stop" button in red
+            } else if manager.state == .starting || manager.state == .waitingForPhone || manager.state == .connecting {
+                // While receiver active: show "Stop" button in red
                 Button {
                     stopSession()
                 } label: {
@@ -314,12 +305,10 @@ public struct DashboardHomeView: View {
     }
 
     private func startThisiPhoneSession() {
-        isStarting = true
         manager.startReceiver()
     }
 
     private func stopSession() {
-        isStarting = false
         showingActiveCarPlay = false
         manager.stopReceiver()
     }

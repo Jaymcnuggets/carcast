@@ -74,6 +74,7 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
             try rtspServer.start()
             try screenReceiver.start()
             bonjourAdvertiser.startAdvertising(name: carName, deviceId: deviceId)
+            CarPlayBluetoothAdvertiser.shared.startAdvertising(carName: carName)
             state = .waitingForPhone
 
             ProtocolLogger.shared.log(
@@ -148,6 +149,7 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
         simulationTimer?.invalidate()
         simulationTimer = nil
         bonjourAdvertiser.stopAdvertising()
+        CarPlayBluetoothAdvertiser.shared.stopAdvertising()
         screenReceiver.stop()
         rtspServer.stop()
 

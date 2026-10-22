@@ -188,4 +188,18 @@ final class CarCastTests: XCTestCase {
         XCTAssertEqual(state, .idle)
         XCTAssertFalse(stoppedStreaming)
     }
+
+    func testWiFiNetworkServicePasswordPersistence() {
+        let wifi = WiFiNetworkService.shared
+        let testSSID = "TestNetwork_\(UUID().uuidString.prefix(6))"
+        let testPwd = "SecretPassword123"
+
+        XCTAssertNil(wifi.getPassword(for: testSSID))
+
+        wifi.savePassword(testPwd, for: testSSID)
+        XCTAssertEqual(wifi.getPassword(for: testSSID), testPwd)
+
+        wifi.forgetPassword(for: testSSID)
+        XCTAssertNil(wifi.getPassword(for: testSSID))
+    }
 }

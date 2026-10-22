@@ -59,7 +59,11 @@
 		<string>fetch</string>
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>CarCast uses location services to provide real-time GPS speedometer, heading, and Apple Maps navigation.</string>
+	<string>CarCast requires location access to determine the name of your current Wi-Fi network so Apple CarPlay can register and connect seamlessly, and to provide vehicle telemetry.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>CarCast uses Bluetooth to discover and establish wireless CarPlay connections.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>CarCast uses Bluetooth to discover and establish wireless CarPlay connections.</string>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>CarCast accesses your media library to display and control native Apple Music playback.</string>
 	<key>UIApplicationSceneManifest</key>

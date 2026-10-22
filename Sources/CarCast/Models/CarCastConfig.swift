@@ -154,11 +154,21 @@ public final class CarCastConfig: ObservableObject {
     }
 
     @Published public var wifiSSID: String {
-        didSet { defaults.set(wifiSSID, forKey: "carcast.wifi.ssid") }
+        didSet {
+            defaults.set(wifiSSID, forKey: "carcast.wifi.ssid")
+            if !wifiSSID.isEmpty, let saved = WiFiNetworkService.shared.getPassword(for: wifiSSID), !saved.isEmpty {
+                wifiPassphrase = saved
+            }
+        }
     }
 
     @Published public var wifiPassphrase: String {
-        didSet { defaults.set(wifiPassphrase, forKey: "carcast.wifi.passphrase") }
+        didSet {
+            defaults.set(wifiPassphrase, forKey: "carcast.wifi.passphrase")
+            if !wifiSSID.isEmpty && !wifiPassphrase.isEmpty {
+                WiFiNetworkService.shared.savePassword(wifiPassphrase, for: wifiSSID)
+            }
+        }
     }
 
     @Published public var wifiChannel: Int {
@@ -220,8 +230,13 @@ public final class CarCastConfig: ObservableObject {
         self.showClusterETA = defaults.object(forKey: "carcast.cluster.show_eta") as? Bool ?? true
         self.carPlayUltraEnabled = defaults.object(forKey: "carcast.cluster.ultra_enabled") as? Bool ?? true
 
-        self.wifiSSID = defaults.string(forKey: "carcast.wifi.ssid") ?? "CarCast-WiFi"
-        self.wifiPassphrase = defaults.string(forKey: "carcast.wifi.passphrase") ?? ""
+        let savedSSID = defaults.string(forKey: "carcast.wifi.ssid") ?? ""
+        self.wifiSSID = savedSSID
+        if !savedSSID.isEmpty, let savedPwd = WiFiNetworkService.shared.getPassword(for: savedSSID), !savedPwd.isEmpty {
+            self.wifiPassphrase = savedPwd
+        } else {
+            self.wifiPassphrase = defaults.string(forKey: "carcast.wifi.passphrase") ?? ""
+        }
         self.wifiChannel = defaults.object(forKey: "carcast.wifi.channel") as? Int ?? 6
     }
 
@@ -241,7 +256,7 @@ public final class CarCastConfig: ObservableObject {
         instrumentClusterSize = .medium
         showClusterETA = true
         carPlayUltraEnabled = true
-        wifiSSID = "CarCast-WiFi"
+        wifiSSID = ""
         wifiPassphrase = ""
         wifiChannel = 6
     }

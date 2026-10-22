@@ -93,7 +93,8 @@ public struct SettingsView: View {
                         Text("Network")
                             .foregroundColor(.primary)
                         Spacer()
-                        Text(config.wifiSSID)
+                        TextField("Network name", text: $config.wifiSSID)
+                            .multilineTextAlignment(.trailing)
                             .foregroundColor(.secondary)
                     }
 
@@ -103,12 +104,14 @@ public struct SettingsView: View {
                             .foregroundColor(.primary)
                         Spacer()
                         if showPassword {
-                            Text(config.wifiPassphrase.isEmpty ? "None" : config.wifiPassphrase)
+                            TextField("Password", text: $config.wifiPassphrase)
                                 .font(.system(size: 15, design: .monospaced))
+                                .multilineTextAlignment(.trailing)
                                 .foregroundColor(.secondary)
                         } else {
-                            Text(config.wifiPassphrase.isEmpty ? "None" : "••••••••")
+                            SecureField("Password", text: $config.wifiPassphrase)
                                 .font(.system(size: 15))
+                                .multilineTextAlignment(.trailing)
                                 .foregroundColor(.secondary)
                         }
                         Button {
@@ -121,13 +124,20 @@ public struct SettingsView: View {
                     }
 
                     Button {
-                        // Use current Wi-Fi action
+                        WiFiNetworkService.shared.requestAuthorizationAndFetchSSID { ssid in
+                            if let ssid = ssid, !ssid.isEmpty {
+                                config.wifiSSID = ssid
+                            }
+                        }
                     } label: {
                         Text("Use current Wi-Fi")
                             .foregroundColor(.blue)
                     }
 
                     Button {
+                        if !config.wifiSSID.isEmpty {
+                            WiFiNetworkService.shared.forgetPassword(for: config.wifiSSID)
+                        }
                         config.wifiPassphrase = ""
                     } label: {
                         Text("Forget this network")

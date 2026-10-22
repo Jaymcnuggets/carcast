@@ -12,6 +12,7 @@
 		3531ED3F94A88E2F582DE20E /* VideoCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F6C7F5ACCC3FD888FE7FE84 /* VideoCanvasView.swift */; };
 		68CC8A267DC17BF4BADD3B80 /* logos.json in Resources */ = {isa = PBXBuildFile; fileRef = EDB82F689DBF0B91C3F3FBA8 /* logos.json */; };
 		723855572C4320D3FB441A22 /* AirPlayBonjourAdvertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F898325785B91F83DC85EB3 /* AirPlayBonjourAdvertiser.swift */; };
+		7742B16AE22242590A36850C /* WiFiNetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C45A6D581FE3882481C5FAD6 /* WiFiNetworkService.swift */; };
 		823266F8C2661C6F7B64B017 /* AirPlayScreenReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01F30FA4B68058A7590AB62 /* AirPlayScreenReceiver.swift */; };
 		8F42B9A0D99A650321AE2454 /* ProtocolMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DE259CDBF62CE5916DC7F57 /* ProtocolMessage.swift */; };
 		94C4CD34DA4C099E79509596 /* CarPlayActiveScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F75B9BEE3825C6A925D7A1F /* CarPlayActiveScreenView.swift */; };
@@ -52,6 +53,7 @@
 		BEC2F770D20B0E06EB124CE3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		BFFE18AC4A80D97B0315A5F1 /* CarCast.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CarCast.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1D3D317E0F9E302515C9CAE /* AirPlayBonjourBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPlayBonjourBrowser.swift; sourceTree = "<group>"; };
+		C45A6D581FE3882481C5FAD6 /* WiFiNetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiFiNetworkService.swift; sourceTree = "<group>"; };
 		C7687FE20C2DDA9AB2368182 /* ConnectRemoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectRemoteView.swift; sourceTree = "<group>"; };
 		CED97DBDDC81119A16DEDA69 /* RTSPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RTSPServer.swift; sourceTree = "<group>"; };
 		E20B298169DB3904C35706CC /* NativeServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeServices.swift; sourceTree = "<group>"; };
@@ -78,6 +80,7 @@
 				1FAE1F5DC3AE3AAF9968A387 /* CarPlayManager.swift */,
 				6802DB1F8FDDC710075A4F03 /* CarPlaySceneDelegate.swift */,
 				E20B298169DB3904C35706CC /* NativeServices.swift */,
+				C45A6D581FE3882481C5FAD6 /* WiFiNetworkService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -107,7 +110,6 @@
 				3CA1C1AF24ABDECA9A5DF252 /* AppIcon */,
 				8256C2DD242EE8927DE193AD /* Logos */,
 				EDB82F689DBF0B91C3F3FBA8 /* logos.json */,
-				88A100022C12345600000002 /* carplay_stream_loop.mp4 */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -251,6 +253,7 @@
 				AA7D1414181FE74FD49B2F10 /* SettingsView.swift in Sources */,
 				E4E95BB10B33E9484EBEC3AC /* VehicleTelemetry.swift in Sources */,
 				3531ED3F94A88E2F582DE20E /* VideoCanvasView.swift in Sources */,
+				7742B16AE22242590A36850C /* WiFiNetworkService.swift in Sources */,
 				D1E9134C3997BEBAA0ED6B89 /* iAP2ProtocolEngine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -103,14 +103,26 @@ public struct DashboardHomeView: View {
                 ConnectRemoteView()
             }
             .alert("Wi-Fi Password", isPresented: $showingPasswordAlert) {
-                SecureField("Password for \(config.wifiSSID)", text: $enteredPassword)
+                let networkName = config.wifiSSID.isEmpty ? "your Wi-Fi" : config.wifiSSID
+                SecureField("Password for \(networkName)", text: $enteredPassword)
                 Button("Save and Connect") {
                     config.wifiPassphrase = enteredPassword
+                    if !config.wifiSSID.isEmpty {
+                        WiFiNetworkService.shared.savePassword(enteredPassword, for: config.wifiSSID)
+                    }
                     startThisiPhoneSession()
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("iOS requires the network password to register this car for CarPlay. It is stored securely on this iPhone.")
+                let networkName = config.wifiSSID.isEmpty ? "your Wi-Fi network" : "\"\(config.wifiSSID)\""
+                Text("iOS requires the network password to register this car for CarPlay on \(networkName). It is stored securely on this iPhone.")
+            }
+            .onAppear {
+                WiFiNetworkService.shared.fetchCurrentSSID { ssid in
+                    if let ssid = ssid, !ssid.isEmpty {
+                        config.wifiSSID = ssid
+                    }
+                }
             }
         }
     }
@@ -261,8 +273,13 @@ public struct DashboardHomeView: View {
                     .foregroundColor(Color(red: 0.0, green: 0.50, blue: 1.0))
                 }
                 .simultaneousGesture(LongPressGesture(minimumDuration: 0.8).onEnded { _ in
-                    enteredPassword = config.wifiPassphrase
-                    showingPasswordAlert = true
+                    WiFiNetworkService.shared.requestAuthorizationAndFetchSSID { detectedSSID in
+                        if let ssid = detectedSSID, !ssid.isEmpty {
+                            config.wifiSSID = ssid
+                        }
+                        enteredPassword = config.wifiPassphrase
+                        showingPasswordAlert = true
+                    }
                 })
             }
         }
@@ -271,10 +288,20 @@ public struct DashboardHomeView: View {
     // MARK: - Actions
 
     private func handleThisiPhoneTap() {
-        if config.wifiPassphrase.isEmpty && !config.wifiSSID.isEmpty {
-            showingPasswordAlert = true
-        } else {
-            startThisiPhoneSession()
+        WiFiNetworkService.shared.requestAuthorizationAndFetchSSID { detectedSSID in
+            if let ssid = detectedSSID, !ssid.isEmpty {
+                config.wifiSSID = ssid
+                if let savedPwd = WiFiNetworkService.shared.getPassword(for: ssid), !savedPwd.isEmpty {
+                    config.wifiPassphrase = savedPwd
+                }
+            }
+
+            if config.wifiPassphrase.isEmpty {
+                enteredPassword = ""
+                showingPasswordAlert = true
+            } else {
+                startThisiPhoneSession()
+            }
         }
     }
 

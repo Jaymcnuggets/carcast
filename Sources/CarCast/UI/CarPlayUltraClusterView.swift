@@ -12,6 +12,7 @@ import CoreMedia
 import Combine
 
 public struct CarPlayUltraClusterView: View {
+    @Environment(\.dismiss) private var dismiss
     @ObservedObject var telemetry = VehicleTelemetry.shared
     @ObservedObject var config = CarCastConfig.shared
     @ObservedObject var manager = CarPlayManager.shared
@@ -70,32 +71,46 @@ public struct CarPlayUltraClusterView: View {
 
                         Spacer()
 
-                        // Mode Picker
-                        HStack(spacing: 4) {
-                            ForEach(ClusterMode.allCases, id: \.self) { mode in
-                                Button {
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                        displayMode = mode
+                        // Mode Picker & Close
+                        HStack(spacing: 8) {
+                            HStack(spacing: 4) {
+                                ForEach(ClusterMode.allCases, id: \.self) { mode in
+                                    Button {
+                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                            displayMode = mode
+                                        }
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: mode.icon)
+                                                .font(.system(size: 11))
+                                            Text(mode.rawValue)
+                                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                        }
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(displayMode == mode ? Color.cyan.opacity(0.3) : Color.clear)
+                                        .foregroundColor(displayMode == mode ? .cyan : .white.opacity(0.7))
+                                        .clipShape(Capsule())
                                     }
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: mode.icon)
-                                            .font(.system(size: 11))
-                                        Text(mode.rawValue)
-                                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                    }
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(displayMode == mode ? Color.cyan.opacity(0.3) : Color.clear)
-                                    .foregroundColor(displayMode == mode ? .cyan : .white.opacity(0.7))
-                                    .clipShape(Capsule())
                                 }
                             }
+                            .padding(3)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+
+                            Button {
+                                dismiss()
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(8)
+                                    .background(.ultraThinMaterial)
+                                    .clipShape(Circle())
+                                    .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                            }
                         }
-                        .padding(3)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 10)
@@ -118,10 +133,10 @@ public struct CarPlayUltraClusterView: View {
         let isLandscape = size.width > size.height
 
         if isLandscape {
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 // Left Gauge: Speedometer & Gear
                 leftGaugeView
-                    .frame(width: max(160, size.width * 0.22))
+                    .frame(width: 140)
 
                 // Center Console: Live CarPlay Video Canvas
                 ZStack {
@@ -136,13 +151,13 @@ public struct CarPlayUltraClusterView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.vertical, 8)
+                .padding(.vertical, 4)
 
                 // Right Gauge: Compass Heading, Tach & Battery
                 rightGaugeView
-                    .frame(width: max(160, size.width * 0.22))
+                    .frame(width: 140)
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 8)
         } else {
             // Portrait Cockpit Layout
             VStack(spacing: 8) {
@@ -246,7 +261,7 @@ public struct CarPlayUltraClusterView: View {
                     .foregroundColor(.gray)
             }
         }
-        .padding(.vertical, 24)
+        .padding(.vertical, 12)
         .padding(.horizontal, 10)
         .background(
             RoundedRectangle(cornerRadius: 18)
@@ -330,7 +345,7 @@ public struct CarPlayUltraClusterView: View {
                     .foregroundColor(.white.opacity(0.8))
             }
         }
-        .padding(.vertical, 24)
+        .padding(.vertical, 12)
         .padding(.horizontal, 10)
         .background(
             RoundedRectangle(cornerRadius: 18)

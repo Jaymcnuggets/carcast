@@ -60,99 +60,101 @@ public struct AirPlayReceiverStandbyView: View {
             ZStack {
                 Circle()
                     .stroke(Color.cyan.opacity(radarPulse ? 0.0 : 0.35), lineWidth: 1.5)
-                    .frame(width: radarPulse ? 420 : 120, height: radarPulse ? 420 : 120)
+                    .frame(width: radarPulse ? 380 : 100, height: radarPulse ? 380 : 100)
                     .animation(.easeOut(duration: 2.5).repeatForever(autoreverses: false), value: radarPulse)
 
                 Circle()
                     .stroke(Color.cyan.opacity(radarPulse ? 0.0 : 0.25), lineWidth: 1)
-                    .frame(width: radarPulse ? 580 : 180, height: radarPulse ? 580 : 180)
+                    .frame(width: radarPulse ? 480 : 160, height: radarPulse ? 480 : 160)
                     .animation(.easeOut(duration: 2.5).delay(0.6).repeatForever(autoreverses: false), value: radarPulse)
             }
+            .clipped()
 
-            VStack(spacing: 22) {
+            VStack(spacing: 14) {
                 // Vehicle Brand & Name
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     Image(systemName: "antenna.radiowaves.left.and.right")
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.cyan)
 
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 1) {
                         Text(config.carName)
-                            .font(.system(size: 19, weight: .heavy, design: .rounded))
+                            .font(.system(size: 16, weight: .heavy, design: .rounded))
                             .foregroundColor(.white)
                         Text("Apple CarPlay Wireless Receiver")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 10, weight: .medium))
                             .foregroundColor(.cyan.opacity(0.85))
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
                 .background(.ultraThinMaterial)
                 .clipShape(Capsule())
                 .overlay(Capsule().stroke(Color.cyan.opacity(0.3), lineWidth: 1))
 
                 // Status Box
-                VStack(spacing: 14) {
-                    HStack(spacing: 8) {
+                VStack(spacing: 10) {
+                    HStack(spacing: 6) {
                         Circle()
                             .fill(manager.state == .streaming ? Color.green : Color.yellow)
-                            .frame(width: 9, height: 9)
+                            .frame(width: 8, height: 8)
                         Text(manager.state == .streaming ? "STREAMING ACTIVE" : "WAITING FOR IPHONE CONNECTION")
-                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
                             .foregroundColor(.white)
                     }
 
                     // Network & Ports Specs
-                    HStack(spacing: 18) {
-                        VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 14) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text("BONJOUR")
-                                .font(.system(size: 9, weight: .bold))
+                                .font(.system(size: 8, weight: .bold))
                                 .foregroundColor(.gray)
                             Text("_airplay._tcp")
-                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
                                 .foregroundColor(.white)
                         }
 
-                        Divider().frame(height: 22)
+                        Divider().frame(height: 18)
 
-                        VStack(alignment: .leading, spacing: 3) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text("RTSP")
-                                .font(.system(size: 9, weight: .bold))
+                                .font(.system(size: 8, weight: .bold))
                                 .foregroundColor(.gray)
                             Text("Port 7000")
-                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
                                 .foregroundColor(.white)
                         }
 
-                        Divider().frame(height: 22)
+                        Divider().frame(height: 18)
 
-                        VStack(alignment: .leading, spacing: 3) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text("H.264 VIDEO")
-                                .font(.system(size: 9, weight: .bold))
+                                .font(.system(size: 8, weight: .bold))
                                 .foregroundColor(.gray)
                             Text("Port 7100")
-                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
                                 .foregroundColor(.white)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                     .background(Color.white.opacity(0.04))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
-                .padding(20)
+                .padding(14)
                 .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.12), lineWidth: 1))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.12), lineWidth: 1))
 
                 // Connection steps
-                HStack(spacing: 18) {
-                    Label("1. Open Settings > CarPlay or Screen Mirroring", systemImage: "iphone")
+                HStack(spacing: 12) {
+                    Label("1. Settings > CarPlay", systemImage: "iphone")
                     Label("2. Tap \"\(config.carName)\"", systemImage: "car.fill")
                 }
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 10, weight: .medium))
                 .foregroundColor(.white.opacity(0.7))
             }
+            .padding(.horizontal, 16)
         }
         .onAppear {
             radarPulse = true

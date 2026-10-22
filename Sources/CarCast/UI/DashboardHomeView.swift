@@ -96,9 +96,16 @@ public struct DashboardHomeView: View {
             .fullScreenCover(isPresented: $showingActiveCarPlay) {
                 CarPlayActiveScreenView()
             }
+            .fullScreenCover(isPresented: $showingUltraCluster) {
+                CarPlayUltraClusterView()
+                    .ignoresSafeArea()
+            }
             #else
             .sheet(isPresented: $showingActiveCarPlay) {
                 CarPlayActiveScreenView()
+            }
+            .sheet(isPresented: $showingUltraCluster) {
+                CarPlayUltraClusterView()
             }
             #endif
             .sheet(isPresented: $showingSettings) {
@@ -112,23 +119,6 @@ public struct DashboardHomeView: View {
             }
             .sheet(isPresented: $showingInspector) {
                 ProtocolInspectorView()
-            }
-            .sheet(isPresented: $showingUltraCluster) {
-                NavigationStack {
-                    CarPlayUltraClusterView()
-                        .navigationTitle("CarPlay Ultra Instrument Cluster")
-                        #if os(iOS)
-                        .navigationBarTitleDisplayMode(.inline)
-                        #endif
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") {
-                                    showingUltraCluster = false
-                                }
-                                .foregroundColor(.cyan)
-                            }
-                        }
-                }
             }
         }
     }

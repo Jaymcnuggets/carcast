@@ -269,7 +269,7 @@ public final class DrivingModeConfig: ObservableObject {
         }
 
         self.isPortraitAllowed = defaults.object(forKey: "drivingmode.display.portrait") as? Bool ?? false
-        self.avoidNotch = defaults.object(forKey: "drivingmode.display.avoid_notch") as? Bool ?? true
+        self.avoidNotch = defaults.object(forKey: "drivingmode.display.avoid_notch") as? Bool ?? false
         self.showTouches = defaults.object(forKey: "drivingmode.display.show_touches") as? Bool ?? false
         self.videoPlaybackAllowed = defaults.object(forKey: "drivingmode.display.video_playback") as? Bool ?? true
 
@@ -336,7 +336,7 @@ public final class DrivingModeConfig: ObservableObject {
         drivingPosition = .leftHandDrive
         displayPreset = .fitScreen
         isPortraitAllowed = false
-        avoidNotch = true
+        avoidNotch = false
         showTouches = false
         videoPlaybackAllowed = true
         nightMode = .auto

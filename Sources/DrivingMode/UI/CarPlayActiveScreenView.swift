@@ -26,13 +26,14 @@ public struct CarPlayActiveScreenView: View {
                 Color.black.ignoresSafeArea()
 
                 // Hardware-accelerated Apple CarPlay H.264 video layer
+                // Fills 100% of the screen height edge-to-edge
                 RawVideoCanvasView(onTouchPoint: { pt in
                     withAnimation(.easeOut(duration: 0.15)) {
                         touchIndicatorPoint = pt
                     }
                 })
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .ignoresSafeArea(config.avoidNotch ? [] : .all)
+                .frame(width: geo.size.width, height: geo.size.height)
+                .ignoresSafeArea(.all)
 
                 // Touch feedback indicator
                 if let pt = touchIndicatorPoint {
@@ -122,7 +123,10 @@ public struct CarPlayActiveScreenView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
             }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .ignoresSafeArea(.all)
         }
+        .ignoresSafeArea(.all)
         #if os(iOS)
         .statusBarHidden(true)
         #endif

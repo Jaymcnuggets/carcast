@@ -51,10 +51,12 @@ public struct DashboardHomeView: View {
         Group {
             if manager.isStreamingActive {
                 CarPlayActiveScreenView()
+                    .ignoresSafeArea(.all)
             } else {
                 dashboardView
             }
         }
+        .ignoresSafeArea(manager.isStreamingActive ? .all : [])
     }
 
     private var dashboardView: some View {

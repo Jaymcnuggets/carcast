@@ -209,9 +209,11 @@ public final class SampleBufferContainerView: UIView {
 
     private func setupLayer() {
         backgroundColor = .black
+        autoresizingMask = [.flexibleWidth, .flexibleHeight]
         sampleLayer.videoGravity = .resizeAspect
         sampleLayer.backgroundColor = UIColor.black.cgColor
         sampleLayer.preventsDisplaySleepDuringVideoPlayback = true
+        updateVideoGravity()
 
         #if targetEnvironment(simulator)
         simulatorPreviewView.contentMode = .scaleToFill
@@ -286,9 +288,37 @@ public final class SampleBufferContainerView: UIView {
 
     public override func layoutSubviews() {
         super.layoutSubviews()
+        sampleLayer.frame = bounds
+        updateVideoGravity()
         #if targetEnvironment(simulator)
         simulatorPreviewView.frame = bounds
         #endif
+    }
+
+    private func updateVideoGravity() {
+        guard bounds.width > 0, bounds.height > 0 else {
+            sampleLayer.videoGravity = .resizeAspect
+            return
+        }
+        let streamW: Double
+        let streamH: Double
+        if CarPlayManager.shared.currentStreamResolution.width > 0 && CarPlayManager.shared.currentStreamResolution.height > 0 {
+            streamW = Double(CarPlayManager.shared.currentStreamResolution.width)
+            streamH = Double(CarPlayManager.shared.currentStreamResolution.height)
+        } else {
+            streamW = 1920.0
+            streamH = 1028.0
+        }
+        let streamAspect = streamW / streamH
+        let viewAspect = Double(bounds.width / bounds.height)
+
+        // When view is wider than stream (iPhone landscape), resizeAspect fills 100% of height.
+        // When view is narrower/taller than stream (iPad), resizeAspectFill ensures height is 100% filled without vertical letterboxing.
+        if viewAspect >= streamAspect {
+            sampleLayer.videoGravity = .resizeAspect
+        } else {
+            sampleLayer.videoGravity = .resizeAspectFill
+        }
     }
 
     private var lastTouchBeganTime: TimeInterval = 0
@@ -371,20 +401,14 @@ public final class SampleBufferContainerView: UIView {
         var renderW = viewW
         var renderH = viewH
         var offsetX: CGFloat = 0
-        var offsetY: CGFloat = 0
 
-        if viewAspect > streamAspect {
-            // View is wider than stream -> pillarbox (black bars left and right)
-            renderW = CGFloat(Double(viewH) * streamAspect)
-            offsetX = (viewW - renderW) / 2.0
-        } else {
-            // View is taller than stream -> letterbox (black bars top and bottom)
-            renderH = CGFloat(Double(viewW) / streamAspect)
-            offsetY = (viewH - renderH) / 2.0
-        }
+        // Height is always 100% filled to screen height (renderH = viewH, offsetY = 0)
+        renderH = viewH
+        renderW = CGFloat(Double(viewH) * streamAspect)
+        offsetX = (viewW - renderW) / 2.0
 
         let normX = min(max(Double((loc.x - offsetX) / max(renderW, 1.0)), 0.0), 1.0)
-        let normY = min(max(Double((loc.y - offsetY) / max(renderH, 1.0)), 0.0), 1.0)
+        let normY = min(max(Double(loc.y / max(viewH, 1.0)), 0.0), 1.0)
         return (normX, normY)
         #endif
     }

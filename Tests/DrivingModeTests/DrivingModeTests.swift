@@ -92,6 +92,40 @@ final class DrivingModeTests: XCTestCase {
         XCTAssertTrue(config.isHUDMirrored)
     }
 
+    func testDashcamStorageManagerCreationAndPruning() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let storage = DashcamStorageManager(baseDirectory: tempDir, quotaBytes: 10 * 1024 * 1024) // 10 MB quota for test
+        
+        XCTAssertTrue(FileManager.default.fileExists(atPath: storage.recordingsDirectory.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: storage.emergencyDirectory.path))
+        
+        // Create 3 dummy 4 MB recording files
+        let dummyData = Data(repeating: 0xAA, count: 4 * 1024 * 1024)
+        let file1 = storage.recordingsDirectory.appendingPathComponent("dashcam_20261023_100000.mp4")
+        let file2 = storage.recordingsDirectory.appendingPathComponent("dashcam_20261023_100500.mp4")
+        let file3 = storage.recordingsDirectory.appendingPathComponent("dashcam_20261023_101000.mp4")
+        
+        try dummyData.write(to: file1)
+        // Give slightly different creation times
+        try dummyData.write(to: file2)
+        try dummyData.write(to: file3)
+        
+        // 12 MB total > 10 MB quota -> enforcePruning should remove file1 (oldest)
+        storage.enforceQuota()
+        
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file1.path), "Oldest file should have been pruned")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file2.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file3.path))
+        
+        // Lock file2 as emergency
+        let emergencyFile = storage.lockAsEmergency(fileURL: file2)
+        XCTAssertNotNil(emergencyFile)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: emergencyFile!.path))
+        
+        // Cleanup
+        try? FileManager.default.removeItem(at: tempDir)
+    }
+
     @MainActor
     func testVehicleTelemetry() {
         let telemetry = VehicleTelemetry.shared

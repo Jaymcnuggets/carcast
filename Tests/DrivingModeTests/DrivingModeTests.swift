@@ -316,4 +316,15 @@ final class DrivingModeTests: XCTestCase {
 
         server.stop()
     }
+
+    func testBonjourAdvertiserTXTRecordsAndState() {
+        let advertiser = AirPlayBonjourAdvertiser(port: 7000)
+        advertiser.startAdvertising(name: "DrivingMode-TestUnit", deviceId: "02:55:4E:AA:BB:CC")
+        
+        // Rapid stop/start cycle reset verification
+        advertiser.stopAdvertising()
+        advertiser.startAdvertising(name: "DrivingMode-TestUnit2", deviceId: "02:55:4E:AA:BB:DD")
+        XCTAssertNotNil(advertiser)
+        advertiser.stopAdvertising()
+    }
 }

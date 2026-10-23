@@ -147,6 +147,9 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
             // Start Bluetooth CarPlay advertisement so iOS Settings > General > CarPlay discovers the vehicle
             CarPlayBluetoothAdvertiser.shared.startAdvertising(carName: carName)
 
+            // Start Bonjour mDNS advertisement (_airplay._tcp, _raop._tcp, _carplay._tcp, _drivingmode._tcp)
+            self.bonjourAdvertiser.startAdvertising(name: carName, deviceId: deviceId)
+
             let boundRtspPort: UInt16 = rtspServer.boundPort != 0 ? rtspServer.boundPort : 7000
             let currentIP = WiFiNetworkService.shared.currentIPAddress ?? "192.168.86.46"
             let currentSSID = config.wifiSSID.isEmpty ? "HiFi" : config.wifiSSID
@@ -259,6 +262,7 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
         simulationTimer = nil
         CarPlayLockdownService.shared.stopSession()
         CarPlayBluetoothAdvertiser.shared.stopAdvertising()
+        bonjourAdvertiser.stopAdvertising()
         screenReceiver.stop()
         rtspServer.stop()
 

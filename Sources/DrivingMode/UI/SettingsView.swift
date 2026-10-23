@@ -286,6 +286,59 @@ public struct SettingsView: View {
                     Text("A second CarPlay screen for maps and turn-by-turn directions, with its content, ETA and size.")
                 }
 
+                // MARK: - Section: Integrated Dashcam
+                Section {
+                    Toggle(isOn: $config.isDashcamEnabled) {
+                        HStack(spacing: 12) {
+                            settingsIcon(systemName: "camera.fill", color: .red)
+                            Text("Enable Dashcam")
+                        }
+                    }
+
+                    if config.isDashcamEnabled {
+                        Toggle(isOn: $config.isDashcamAudioEnabled) {
+                            HStack(spacing: 12) {
+                                settingsIcon(systemName: "mic.fill", color: .blue)
+                                Text("Record In-Cabin Audio")
+                            }
+                        }
+
+                        HStack(spacing: 12) {
+                            settingsIcon(systemName: "internaldrive.fill", color: .gray)
+                            Text("Storage Quota")
+                            Spacer()
+                            Text("\(config.dashcamStorageLimitMB / 1024) GB")
+                                .foregroundColor(.secondary)
+                        }
+
+                        HStack(spacing: 12) {
+                            settingsIcon(systemName: "sensor.tag.radiowaves.forward.fill", color: .orange)
+                            Text("Impact Sensitivity")
+                            Spacer()
+                            Text(String(format: "%.1f G", config.impactSensitivityG))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Dashcam")
+                } footer: {
+                    Text("Records rolling 5-minute clips in the background while CarPlay runs. Sudden G-force impacts automatically lock footage into Emergency storage.")
+                }
+
+                // MARK: - Section: Windshield Night HUD
+                Section {
+                    Toggle(isOn: $config.isHUDMirrored) {
+                        HStack(spacing: 12) {
+                            settingsIcon(systemName: "arrow.left.and.right.righttriangle.left.righttriangle.right", color: .cyan)
+                            Text("Mirror for Windshield Glass")
+                        }
+                    }
+                } header: {
+                    Text("Windshield Night HUD")
+                } footer: {
+                    Text("Flips the HUD horizontally so when your device is placed flat on your dashboard, the reflection in the glass is readable.")
+                }
+
                 // MARK: - Section 5: Modes
                 Section {
                     Toggle(isOn: $androidAutoEnabled) {

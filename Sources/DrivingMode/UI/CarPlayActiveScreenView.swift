@@ -14,8 +14,10 @@ public struct CarPlayActiveScreenView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var manager = CarPlayManager.shared
     @ObservedObject var config = DrivingModeConfig.shared
+    @ObservedObject var dashcam = DashcamManager.shared
 
     @State private var touchIndicatorPoint: CGPoint? = nil
+    @State private var showingHUDSheet: Bool = false
 
     public init() {}
 
@@ -43,10 +45,48 @@ public struct CarPlayActiveScreenView: View {
                         .allowsHitTesting(false)
                 }
 
-                // Live status badge in top trailing corner
+                // Top Controls & Status Bar
                 VStack {
                     HStack {
+                        // Quick Action Buttons
+                        HStack(spacing: 8) {
+                            Button {
+                                showingHUDSheet = true
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Image(systemName: "windshield.front.and.heat.waves")
+                                    Text("HUD")
+                                }
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.black.opacity(0.65))
+                                .cornerRadius(12)
+                            }
+
+                            if dashcam.isRecording {
+                                Button {
+                                    dashcam.saveCurrentEvent(reason: "CarPlay Screen")
+                                } label: {
+                                    HStack(spacing: 5) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                        Text("LOCK CLIP")
+                                    }
+                                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.yellow)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(Color.black.opacity(0.65))
+                                    .cornerRadius(12)
+                                }
+                            }
+                        }
+                        .padding(.leading, 20)
+                        .padding(.top, 10)
+
                         Spacer()
+
                         HStack(spacing: 6) {
                             Circle()
                                 .fill(manager.isStreamingActive ? Color.green : Color.orange)
@@ -69,7 +109,9 @@ public struct CarPlayActiveScreenView: View {
                     }
                     Spacer()
                 }
-                .allowsHitTesting(false)
+
+                // Floating Dashcam PiP Viewfinder
+                DashcamPiPOverlay()
 
                 // If stream is waiting or initializing, show clean subtle status
                 if !manager.isStreamingActive {
@@ -102,9 +144,21 @@ public struct CarPlayActiveScreenView: View {
         #if os(iOS)
         .statusBarHidden(true)
         #endif
+        .sheet(isPresented: $showingHUDSheet) {
+            WindshieldHUDView()
+        }
         .onAppear {
             if manager.state == .idle {
                 manager.startReceiver()
+            }
+            if config.isDashcamEnabled && !dashcam.isRecording {
+                dashcam.startRecording(withAudio: config.isDashcamAudioEnabled)
+            }
+            SteeringWheelRemoteService.shared.onEmergencySavePressed = {
+                dashcam.saveCurrentEvent(reason: "Steering Wheel Remote")
+            }
+            SteeringWheelRemoteService.shared.onHomePressed = {
+                manager.sendHomeButtonPress()
             }
         }
         .onChange(of: manager.isStreamingActive) { active in

@@ -79,6 +79,7 @@ final class DrivingModeTests: XCTestCase {
         XCTAssertTrue(config.carName.hasPrefix("DrivingMode"))
         XCTAssertEqual(config.displayPreset, .fitScreen)
         XCTAssertEqual(config.drivingPosition, .leftHandDrive)
+        XCTAssertTrue(config.fillScreenEdgeToEdge)
     }
 
     @MainActor

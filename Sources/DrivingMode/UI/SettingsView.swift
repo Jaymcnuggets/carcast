@@ -167,6 +167,20 @@ public struct SettingsView: View {
                         }
                     }
 
+                    // Aspect Ratio: Fill screen vs Fit
+                    Toggle(isOn: $config.fillScreenEdgeToEdge) {
+                        HStack(spacing: 12) {
+                            settingsIcon(systemName: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left", color: .blue)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Fill screen edge-to-edge")
+                                    .foregroundColor(.primary)
+                                Text(config.fillScreenEdgeToEdge ? "Full width & height (Zero black bars)" : "Preserve aspect ratio (Black bars)")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+
                     Toggle(isOn: $config.videoPlaybackAllowed) {
                         HStack(spacing: 12) {
                             settingsIcon(systemName: "play.rectangle.fill", color: .red)

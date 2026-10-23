@@ -10,6 +10,7 @@ import SwiftUI
 public struct DashboardHomeView: View {
     @ObservedObject var manager = CarPlayManager.shared
     @ObservedObject var config = DrivingModeConfig.shared
+    @ObservedObject var dashcam = DashcamManager.shared
 
     @State private var showingSettings: Bool = false
     @State private var showingConnect: Bool = false
@@ -93,17 +94,53 @@ public struct DashboardHomeView: View {
                             .padding(.top, 6)
                     }
 
-                    // Authentic Centered Settings Button directly below status
-                    Button {
-                        showingSettings = true
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "gearshape.fill")
-                                .font(.system(size: 20, weight: .medium))
-                            Text("Settings")
-                                .font(.system(size: 19, weight: .regular))
+                    // Centered Actions: Settings and Dashcam quick controls
+                    HStack(spacing: 20) {
+                        Button {
+                            showingSettings = true
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "gearshape.fill")
+                                    .font(.system(size: 20, weight: .medium))
+                                Text("Settings")
+                                    .font(.system(size: 19, weight: .regular))
+                            }
+                            .foregroundColor(Color(red: 0.0, green: 0.50, blue: 1.0))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.white.opacity(0.06))
+                            .cornerRadius(10)
                         }
-                        .foregroundColor(Color(red: 0.0, green: 0.50, blue: 1.0))
+
+                        Button {
+                            if dashcam.isRecording {
+                                dashcam.stopRecording()
+                                config.isDashcamEnabled = false
+                            } else {
+                                config.isDashcamEnabled = true
+                                dashcam.startRecording(withAudio: config.isDashcamAudioEnabled)
+                            }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .fill(dashcam.isRecording ? Color.red : Color.gray.opacity(0.6))
+                                    .frame(width: 8, height: 8)
+                                Image(systemName: dashcam.isRecording ? "record.circle.fill" : "camera.fill")
+                                    .font(.system(size: 19, weight: .medium))
+                                    .foregroundColor(dashcam.isRecording ? .red : Color(red: 0.0, green: 0.50, blue: 1.0))
+                                Text(dashcam.isRecording ? "Dashcam (REC)" : "Dashcam (OFF)")
+                                    .font(.system(size: 19, weight: dashcam.isRecording ? .semibold : .regular))
+                                    .foregroundColor(dashcam.isRecording ? .red : Color(red: 0.0, green: 0.50, blue: 1.0))
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(dashcam.isRecording ? Color.red.opacity(0.18) : Color.white.opacity(0.06))
+                            .cornerRadius(10)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(dashcam.isRecording ? Color.red.opacity(0.4) : Color.white.opacity(0.12), lineWidth: 1)
+                            )
+                        }
                     }
                     .padding(.top, 22)
 
@@ -129,6 +166,9 @@ public struct DashboardHomeView: View {
                         .padding(.horizontal, 32)
                         .padding(.bottom, 34)
                 }
+
+                // Floating live Dashcam viewfinder overlay
+                DashcamPiPOverlay()
             }
             #if os(iOS)
             .toolbar(.hidden, for: .navigationBar)

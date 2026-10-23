@@ -296,6 +296,10 @@ public final class SampleBufferContainerView: UIView {
     }
 
     private func updateVideoGravity() {
+        if DrivingModeConfig.shared.fillScreenEdgeToEdge {
+            sampleLayer.videoGravity = .resize
+            return
+        }
         guard bounds.width > 0, bounds.height > 0 else {
             sampleLayer.videoGravity = .resizeAspect
             return
@@ -385,6 +389,12 @@ public final class SampleBufferContainerView: UIView {
         let normY = min(max(Double(loc.y / viewH), 0.0), 1.0)
         return (normX, normY)
         #else
+        if DrivingModeConfig.shared.fillScreenEdgeToEdge {
+            let normX = min(max(Double(loc.x / viewW), 0.0), 1.0)
+            let normY = min(max(Double(loc.y / viewH), 0.0), 1.0)
+            return (normX, normY)
+        }
+
         let streamW: Double
         let streamH: Double
         if CarPlayManager.shared.currentStreamResolution.width > 0 && CarPlayManager.shared.currentStreamResolution.height > 0 {

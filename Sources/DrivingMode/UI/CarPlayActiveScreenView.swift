@@ -48,25 +48,56 @@ public struct CarPlayActiveScreenView: View {
                 // Top Controls & Status Bar
                 VStack {
                     HStack {
-                        // Quick Action Buttons
-                        if dashcam.isRecording {
+                        // Always-visible Dashcam controls in CarPlay top bar
+                        HStack(spacing: 8) {
                             Button {
-                                dashcam.saveCurrentEvent(reason: "CarPlay Screen")
-                            } label: {
-                                HStack(spacing: 5) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                    Text("LOCK CLIP")
+                                if dashcam.isRecording {
+                                    dashcam.stopRecording()
+                                    config.isDashcamEnabled = false
+                                } else {
+                                    config.isDashcamEnabled = true
+                                    dashcam.startRecording(withAudio: config.isDashcamAudioEnabled)
                                 }
-                                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                .foregroundColor(.yellow)
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Circle()
+                                        .fill(dashcam.isRecording ? Color.red : Color.gray.opacity(0.8))
+                                        .frame(width: 8, height: 8)
+                                    Image(systemName: "camera.fill")
+                                        .font(.system(size: 11, weight: .bold))
+                                    Text(dashcam.isRecording ? "DASHCAM REC" : "START DASHCAM")
+                                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                }
+                                .foregroundColor(.white)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
-                                .background(Color.black.opacity(0.65))
+                                .background(dashcam.isRecording ? Color.red.opacity(0.4) : Color.black.opacity(0.65))
                                 .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(dashcam.isRecording ? Color.red.opacity(0.7) : Color.white.opacity(0.2), lineWidth: 1)
+                                )
                             }
-                            .padding(.leading, 20)
-                            .padding(.top, 10)
+
+                            if dashcam.isRecording {
+                                Button {
+                                    dashcam.saveCurrentEvent(reason: "CarPlay Screen")
+                                } label: {
+                                    HStack(spacing: 5) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                        Text("LOCK CLIP")
+                                    }
+                                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.yellow)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(Color.black.opacity(0.65))
+                                    .cornerRadius(12)
+                                }
+                            }
                         }
+                        .padding(.leading, 20)
+                        .padding(.top, 10)
 
                         Spacer()
 

@@ -180,9 +180,9 @@ public struct DashboardHomeView: View {
     @ViewBuilder
     private var drivingModeAppIcon: some View {
         #if canImport(UIKit)
-        if let icon = UIImage(named: "AppIcon") ??
-           (Bundle.main.path(forResource: "AppIcon", ofType: "png", inDirectory: "AppIcon").flatMap { UIImage(contentsOfFile: $0) }) ??
-           (Bundle.main.path(forResource: "AppIcon", ofType: "png").flatMap { UIImage(contentsOfFile: $0) }) {
+        if let path = Bundle.main.path(forResource: "AppIcon", ofType: "png", inDirectory: "AppIcon") ??
+                      Bundle.main.path(forResource: "AppIcon", ofType: "png"),
+           let icon = UIImage(contentsOfFile: path) {
             Image(uiImage: icon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)

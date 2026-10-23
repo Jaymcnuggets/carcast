@@ -120,18 +120,13 @@ public final class RTSPServer: @unchecked Sendable {
                 Task { @MainActor in
                     ProtocolLogger.shared.log(category: .rtsp, title: "RTSP Server Failed", detail: err.localizedDescription)
                 }
-                #if targetEnvironment(simulator)
-                // On macOS simulator, host AirPlay (ControlCenter) often owns port 7000. Do not spin retrying in simulator.
-                if (self?.bindRetryCount ?? 0) >= 1 {
-                    return
-                }
-                #endif
-                self?.bindRetryCount += 1
-                // If port in TIME_WAIT (e.g. error 48 Address already in use), retry after 1.5s
+                #if !targetEnvironment(simulator)
+                // If port in TIME_WAIT (e.g. error 48 Address already in use), retry after 1.5s on physical device
                 self?.queue.asyncAfter(deadline: .now() + 1.5) { [weak self] in
                     guard let self = self, self.listener?.state != .ready else { return }
                     try? self.start()
                 }
+                #endif
             default:
                 break
             }

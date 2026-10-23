@@ -161,6 +161,27 @@ final class DrivingModeTests: XCTestCase {
     }
 
     @MainActor
+    func testSteeringWheelRemoteKeyBinding() {
+        let service = SteeringWheelRemoteService.shared
+        var homeTriggered = false
+        var siriTriggered = false
+        var emergencyTriggered = false
+
+        service.onHomePressed = { homeTriggered = true }
+        service.onSiriPressed = { siriTriggered = true }
+        service.onEmergencySavePressed = { emergencyTriggered = true }
+
+        service.handleKeyInput("h")
+        XCTAssertTrue(homeTriggered)
+
+        service.handleKeyInput("s")
+        XCTAssertTrue(siriTriggered)
+
+        service.handleKeyInput("e")
+        XCTAssertTrue(emergencyTriggered)
+    }
+
+    @MainActor
     func testVehicleTelemetry() {
         let telemetry = VehicleTelemetry.shared
         telemetry.updateNowPlaying(

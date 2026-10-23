@@ -135,7 +135,7 @@ public final class DrivingModeConfig: ObservableObject {
     }
 
     @Published public var fillScreenEdgeToEdge: Bool {
-        didSet { defaults.set(fillScreenEdgeToEdge, forKey: "drivingmode.display.fill_edge_to_edge") }
+        didSet { defaults.set(fillScreenEdgeToEdge, forKey: "drivingmode.display.fill_edge_to_edge_v2") }
     }
 
     @Published public var isPortraitAllowed: Bool {
@@ -272,7 +272,7 @@ public final class DrivingModeConfig: ObservableObject {
             self.displayPreset = .fitScreen
         }
 
-        self.fillScreenEdgeToEdge = defaults.object(forKey: "drivingmode.display.fill_edge_to_edge") as? Bool ?? true
+        self.fillScreenEdgeToEdge = defaults.object(forKey: "drivingmode.display.fill_edge_to_edge_v2") as? Bool ?? false
 
         self.isPortraitAllowed = defaults.object(forKey: "drivingmode.display.portrait") as? Bool ?? false
         self.avoidNotch = defaults.object(forKey: "drivingmode.display.avoid_notch") as? Bool ?? false
@@ -341,7 +341,7 @@ public final class DrivingModeConfig: ObservableObject {
         customLogoLabel = ""
         drivingPosition = .leftHandDrive
         displayPreset = .fitScreen
-        fillScreenEdgeToEdge = true
+        fillScreenEdgeToEdge = false
         isPortraitAllowed = false
         avoidNotch = false
         showTouches = false

@@ -17,8 +17,11 @@ public struct CarPlayActiveScreenView: View {
     @ObservedObject var dashcam = DashcamManager.shared
 
     @State private var touchIndicatorPoint: CGPoint? = nil
+    public var onReturnToMenu: (() -> Void)? = nil
 
-    public init() {}
+    public init(onReturnToMenu: (() -> Void)? = nil) {
+        self.onReturnToMenu = onReturnToMenu
+    }
 
     public var body: some View {
         GeometryReader { geo in
@@ -48,8 +51,31 @@ public struct CarPlayActiveScreenView: View {
                 // Top Controls & Status Bar
                 VStack {
                     HStack {
-                        // Always-visible Dashcam controls in CarPlay top bar
+                        // Navigation & Dashcam quick controls
                         HStack(spacing: 8) {
+                            // Return to Main Menu
+                            Button {
+                                onReturnToMenu?()
+                                dismiss()
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "chevron.left")
+                                        .font(.system(size: 11, weight: .bold))
+                                    Text("MENU")
+                                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.black.opacity(0.65))
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                                )
+                            }
+
+                            // Always-visible Dashcam controls in CarPlay top bar
                             Button {
                                 if dashcam.isRecording {
                                     dashcam.stopRecording()

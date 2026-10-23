@@ -50,14 +50,23 @@ public struct DashboardHomeView: View {
 
     public var body: some View {
         Group {
-            if manager.isStreamingActive {
-                CarPlayActiveScreenView()
-                    .ignoresSafeArea(.all)
+            if manager.isStreamingActive && showingActiveCarPlay {
+                CarPlayActiveScreenView(onReturnToMenu: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showingActiveCarPlay = false
+                    }
+                })
+                .ignoresSafeArea(.all)
             } else {
                 dashboardView
             }
         }
-        .ignoresSafeArea(manager.isStreamingActive ? .all : [])
+        .ignoresSafeArea((manager.isStreamingActive && showingActiveCarPlay) ? .all : [])
+        .onChange(of: manager.isStreamingActive) { active in
+            if active {
+                showingActiveCarPlay = true
+            }
+        }
     }
 
     private var dashboardView: some View {
@@ -196,6 +205,9 @@ public struct DashboardHomeView: View {
             }
 
             .onAppear {
+                if manager.isStreamingActive {
+                    showingActiveCarPlay = true
+                }
                 #if targetEnvironment(simulator)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     manager.startLocalSimulation()

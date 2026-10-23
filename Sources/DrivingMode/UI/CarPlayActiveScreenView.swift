@@ -87,17 +87,17 @@ public struct CarPlayActiveScreenView: View {
                             } label: {
                                 HStack(spacing: 6) {
                                     Circle()
-                                        .fill(dashcam.isRecording ? Color.red : Color.gray.opacity(0.8))
+                                        .fill(dashcam.isRecording ? Color.red : (dashcam.isStarting ? Color.yellow : Color.gray.opacity(0.8)))
                                         .frame(width: 8, height: 8)
                                     Image(systemName: "camera.fill")
                                         .font(.system(size: 11, weight: .bold))
-                                    Text(dashcam.isRecording ? "DASHCAM REC" : "START DASHCAM")
+                                    Text(dashcam.isRecording ? "DASHCAM REC" : (dashcam.isStarting ? "STARTING…" : "START DASHCAM"))
                                         .font(.system(size: 11, weight: .bold, design: .monospaced))
                                 }
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
-                                .background(dashcam.isRecording ? Color.red.opacity(0.4) : Color.black.opacity(0.65))
+                                .background(dashcam.isRecording ? Color.red.opacity(0.4) : (dashcam.isStarting ? Color.yellow.opacity(0.3) : Color.black.opacity(0.65)))
                                 .cornerRadius(12)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)

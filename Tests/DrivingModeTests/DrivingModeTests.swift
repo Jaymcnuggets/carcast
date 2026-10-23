@@ -94,6 +94,7 @@ final class DrivingModeTests: XCTestCase {
     func testDashcamManagerInitialState() {
         let manager = DashcamManager.shared
         XCTAssertFalse(manager.isRecording)
+        XCTAssertFalse(manager.isStarting)
         XCTAssertNil(manager.captureSession)
         XCTAssertNil(manager.recordingStartTime)
     }

@@ -132,14 +132,14 @@ public struct DashboardHomeView: View {
                         } label: {
                             HStack(spacing: 8) {
                                 Circle()
-                                    .fill(dashcam.isRecording ? Color.red : Color.gray.opacity(0.6))
+                                    .fill(dashcam.isRecording ? Color.red : (dashcam.isStarting ? Color.yellow : Color.gray.opacity(0.6)))
                                     .frame(width: 8, height: 8)
                                 Image(systemName: dashcam.isRecording ? "record.circle.fill" : "camera.fill")
                                     .font(.system(size: 19, weight: .medium))
-                                    .foregroundColor(dashcam.isRecording ? .red : Color(red: 0.0, green: 0.50, blue: 1.0))
-                                Text(dashcam.isRecording ? "Dashcam (REC)" : "Dashcam (OFF)")
-                                    .font(.system(size: 19, weight: dashcam.isRecording ? .semibold : .regular))
-                                    .foregroundColor(dashcam.isRecording ? .red : Color(red: 0.0, green: 0.50, blue: 1.0))
+                                    .foregroundColor(dashcam.isRecording ? .red : (dashcam.isStarting ? .yellow : Color(red: 0.0, green: 0.50, blue: 1.0)))
+                                Text(dashcam.isRecording ? "Dashcam (REC)" : (dashcam.isStarting ? "Starting…" : "Dashcam (OFF)"))
+                                    .font(.system(size: 19, weight: (dashcam.isRecording || dashcam.isStarting) ? .semibold : .regular))
+                                    .foregroundColor(dashcam.isRecording ? .red : (dashcam.isStarting ? .yellow : Color(red: 0.0, green: 0.50, blue: 1.0)))
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)

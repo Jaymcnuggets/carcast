@@ -147,6 +147,20 @@ final class DrivingModeTests: XCTestCase {
     }
 
     @MainActor
+    func testDashcamManagerLifecycle() {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let storage = DashcamStorageManager(baseDirectory: tempDir)
+        let manager = DashcamManager(storageManager: storage)
+        XCTAssertFalse(manager.isRecording)
+
+        // Trigger manual emergency save event
+        manager.saveCurrentEvent(reason: "User button")
+        XCTAssertNotNil(manager.lastEmergencyEvent)
+
+        try? FileManager.default.removeItem(at: tempDir)
+    }
+
+    @MainActor
     func testVehicleTelemetry() {
         let telemetry = VehicleTelemetry.shared
         telemetry.updateNowPlaying(

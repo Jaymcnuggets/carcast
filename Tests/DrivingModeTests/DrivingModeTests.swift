@@ -126,6 +126,26 @@ final class DrivingModeTests: XCTestCase {
         try? FileManager.default.removeItem(at: tempDir)
     }
 
+    func testImpactDetectionSpikeAndDebounce() {
+        let service = ImpactDetectionService(thresholdG: 2.5, debounceSeconds: 5.0)
+        var triggeredCount = 0
+        service.onImpact = { _ in
+            triggeredCount += 1
+        }
+
+        // Normal driving: 1.0G (gravity only)
+        service.processAcceleration(x: 0.1, y: 0.2, z: 0.98)
+        XCTAssertEqual(triggeredCount, 0)
+
+        // Hard collision: 2.8G deceleration
+        service.processAcceleration(x: 1.2, y: -2.3, z: 0.9)
+        XCTAssertEqual(triggeredCount, 1)
+
+        // Secondary bounce 1 second later (should be debounced)
+        service.processAcceleration(x: 1.5, y: -2.5, z: 1.0)
+        XCTAssertEqual(triggeredCount, 1, "Should debounce subsequent impacts within window")
+    }
+
     @MainActor
     func testVehicleTelemetry() {
         let telemetry = VehicleTelemetry.shared

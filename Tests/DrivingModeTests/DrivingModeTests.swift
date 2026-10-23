@@ -327,4 +327,47 @@ final class DrivingModeTests: XCTestCase {
         XCTAssertNotNil(advertiser)
         advertiser.stopAdvertising()
     }
+
+    func testRTPAudioHeaderParsing() {
+        // 12-byte standard RTP header: V=2, P=0, X=0, CC=0, M=0, PT=96 (0x80, 0x60), Seq=1001 (0x03, 0xE9), TS=44100, SSRC=0x12345678
+        let headerBytes: [UInt8] = [
+            0x80, 0x60, 0x03, 0xE9,
+            0x00, 0x00, 0xAC, 0x44,
+            0x12, 0x34, 0x56, 0x78
+        ]
+        let pcmPayload = Data(repeating: 0x55, count: 1024)
+        let packetData = Data(headerBytes) + pcmPayload
+
+        let parsed = AirPlayAudioReceiver.parseRTPPacket(packetData)
+        XCTAssertNotNil(parsed)
+        XCTAssertEqual(parsed?.sequenceNumber, 1001)
+        XCTAssertEqual(parsed?.payloadType, 96)
+        XCTAssertEqual(parsed?.timestamp, 44100)
+        XCTAssertEqual(parsed?.ssrc, 0x12345678)
+        XCTAssertEqual(parsed?.payload.count, 1024)
+    }
+
+    func testAudioDuckingStateCalculation() {
+        let receiver = AirPlayAudioReceiver.shared
+        receiver.isPassthroughMode = false
+
+        // Base volume
+        receiver.setBaseVolume(0.8)
+        XCTAssertEqual(receiver.effectiveMainVolume, 0.8, accuracy: 0.01)
+
+        // Simulate Alt Audio active (Siri/Nav prompt)
+        receiver.notifyAltAudioActive(true)
+        XCTAssertEqual(receiver.effectiveMainVolume, 0.8 * 0.25, accuracy: 0.01)
+
+        // Simulate Alt Audio finished
+        receiver.notifyAltAudioActive(false)
+        XCTAssertEqual(receiver.effectiveMainVolume, 0.8, accuracy: 0.01)
+    }
+
+    func testRTSPDbToLinearVolumeConversion() {
+        XCTAssertEqual(AirPlayAudioReceiver.dbToLinear(0.0), 1.0, accuracy: 0.001)
+        XCTAssertEqual(AirPlayAudioReceiver.dbToLinear(-6.0), 0.501, accuracy: 0.01)
+        XCTAssertEqual(AirPlayAudioReceiver.dbToLinear(-30.0), 0.031, accuracy: 0.01)
+        XCTAssertEqual(AirPlayAudioReceiver.dbToLinear(-144.0), 0.0, accuracy: 0.001)
+    }
 }

@@ -60,6 +60,10 @@
 		<string>fetch</string>
 		<string>bluetooth-peripheral</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>DrivingMode uses the camera to record dashcam footage while driving.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>DrivingMode uses the microphone to optionally record in-cabin audio with dashcam footage.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>DrivingMode requires location access to determine the name of your current Wi-Fi network so Apple CarPlay can register and connect seamlessly, and to provide vehicle telemetry.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>

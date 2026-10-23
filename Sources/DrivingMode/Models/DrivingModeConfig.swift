@@ -203,6 +203,30 @@ public final class DrivingModeConfig: ObservableObject {
         didSet { defaults.set(wifiChannel, forKey: "drivingmode.wifi.channel") }
     }
 
+    @Published public var isDashcamEnabled: Bool {
+        didSet { defaults.set(isDashcamEnabled, forKey: "drivingmode.dashcam.enabled") }
+    }
+
+    @Published public var isDashcamAudioEnabled: Bool {
+        didSet { defaults.set(isDashcamAudioEnabled, forKey: "drivingmode.dashcam.audio_enabled") }
+    }
+
+    @Published public var dashcamStorageLimitMB: Int {
+        didSet { defaults.set(dashcamStorageLimitMB, forKey: "drivingmode.dashcam.storage_limit_mb") }
+    }
+
+    @Published public var impactSensitivityG: Double {
+        didSet { defaults.set(impactSensitivityG, forKey: "drivingmode.dashcam.impact_sensitivity_g") }
+    }
+
+    @Published public var isHUDModeEnabled: Bool {
+        didSet { defaults.set(isHUDModeEnabled, forKey: "drivingmode.hud.enabled") }
+    }
+
+    @Published public var isHUDMirrored: Bool {
+        didSet { defaults.set(isHUDMirrored, forKey: "drivingmode.hud.mirrored") }
+    }
+
     public var deviceIdUInt64: UInt64 {
         let clean = deviceId.replacingOccurrences(of: ":", with: "")
         return UInt64(clean, radix: 16) ?? 0x02554E445256
@@ -301,6 +325,15 @@ public final class DrivingModeConfig: ObservableObject {
         }
         self.wifiChannel = defaults.object(forKey: "drivingmode.wifi.channel") as? Int ?? 6
 
+        self.isDashcamEnabled = defaults.bool(forKey: "drivingmode.dashcam.enabled")
+        self.isDashcamAudioEnabled = defaults.bool(forKey: "drivingmode.dashcam.audio_enabled")
+        let storedLimit = defaults.integer(forKey: "drivingmode.dashcam.storage_limit_mb")
+        self.dashcamStorageLimitMB = storedLimit > 0 ? storedLimit : 3072
+        let storedSens = defaults.double(forKey: "drivingmode.dashcam.impact_sensitivity_g")
+        self.impactSensitivityG = storedSens > 0 ? storedSens : 2.5
+        self.isHUDModeEnabled = defaults.bool(forKey: "drivingmode.hud.enabled")
+        self.isHUDMirrored = defaults.object(forKey: "drivingmode.hud.mirrored") != nil ? defaults.bool(forKey: "drivingmode.hud.mirrored") : true
+
         AirPlayAudioReceiver.shared.isPassthroughMode = (resolvedAudioMode == .carBluetoothPassthrough)
     }
 
@@ -325,5 +358,11 @@ public final class DrivingModeConfig: ObservableObject {
         wifiSSID = ""
         wifiPassphrase = ""
         wifiChannel = 6
+        isDashcamEnabled = false
+        isDashcamAudioEnabled = false
+        dashcamStorageLimitMB = 3072
+        impactSensitivityG = 2.5
+        isHUDModeEnabled = false
+        isHUDMirrored = true
     }
 }

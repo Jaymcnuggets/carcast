@@ -82,6 +82,17 @@ final class DrivingModeTests: XCTestCase {
     }
 
     @MainActor
+    func testDashcamAndHUDConfigDefaults() {
+        let config = DrivingModeConfig.shared
+        XCTAssertFalse(config.isDashcamEnabled)
+        XCTAssertFalse(config.isDashcamAudioEnabled)
+        XCTAssertEqual(config.dashcamStorageLimitMB, 3072) // 3 GB
+        XCTAssertEqual(config.impactSensitivityG, 2.5, accuracy: 0.01)
+        XCTAssertFalse(config.isHUDModeEnabled)
+        XCTAssertTrue(config.isHUDMirrored)
+    }
+
+    @MainActor
     func testVehicleTelemetry() {
         let telemetry = VehicleTelemetry.shared
         telemetry.updateNowPlaying(

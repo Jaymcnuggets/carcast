@@ -280,6 +280,9 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
     }
 
     public func sendTouchEvent(action: Int, x: Double, y: Double) {
+        if isSimulating {
+            return
+        }
         // Forward normalized touch to iPhone with primary input device uuid "0"
         rtspServer.sendTouchHIDReport(action: action, x: x, y: y, uuid: "0")
         ProtocolLogger.shared.log(

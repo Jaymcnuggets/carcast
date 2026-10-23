@@ -48,6 +48,7 @@ public final class RTSPServer: @unchecked Sendable {
     private var eventConnection: NWConnection?
     private var eventCipher: ControlCipher?
     private var nextEventCSeq: Int = 1
+    private var bindRetryCount: Int = 0
     public var activeStreamUUID: String = "VideoStream.Main"
     /// Last listener bind failure (e.g. "port 7000: Address already in use"), nil once the listener is ready.
     nonisolated(unsafe) public static var lastBindError: String?
@@ -62,6 +63,7 @@ public final class RTSPServer: @unchecked Sendable {
 
     public func resetSession() {
         queue.async {
+            self.bindRetryCount = 0
             self.eventConnection?.cancel()
             self.eventConnection = nil
             self.eventCipher = nil
@@ -118,6 +120,13 @@ public final class RTSPServer: @unchecked Sendable {
                 Task { @MainActor in
                     ProtocolLogger.shared.log(category: .rtsp, title: "RTSP Server Failed", detail: err.localizedDescription)
                 }
+                #if targetEnvironment(simulator)
+                // On macOS simulator, host AirPlay (ControlCenter) often owns port 7000. Do not spin retrying in simulator.
+                if (self?.bindRetryCount ?? 0) >= 1 {
+                    return
+                }
+                #endif
+                self?.bindRetryCount += 1
                 // If port in TIME_WAIT (e.g. error 48 Address already in use), retry after 1.5s
                 self?.queue.asyncAfter(deadline: .now() + 1.5) { [weak self] in
                     guard let self = self, self.listener?.state != .ready else { return }

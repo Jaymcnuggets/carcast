@@ -15,11 +15,12 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
 
     @Published public private(set) var isRecording = false
     @Published public private(set) var lastEmergencyEvent: Date?
+    @Published public private(set) var captureSession: AVCaptureSession?
     @Published public var previewLayer: AVCaptureVideoPreviewLayer?
+    @Published public private(set) var recordingStartTime: Date?
 
     public let storageManager: DashcamStorageManager
     public let impactService: ImpactDetectionService
-    private var captureSession: AVCaptureSession?
     #if os(iOS)
     private var movieOutput: AVCaptureMovieFileOutput?
     #endif
@@ -40,19 +41,43 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
 
     public func startRecording(withAudio: Bool = false) {
         #if os(iOS)
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        if status == .notDetermined {
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                if granted {
+                    DispatchQueue.main.async {
+                        self?.startRecording(withAudio: withAudio)
+                    }
+                }
+            }
+            return
+        } else if status != .authorized {
+            NSLog("[Dashcam] Video capture unauthorized: %ld", status.rawValue)
+            return
+        }
+
         queue.async { [weak self] in
             guard let self = self, self.captureSession == nil else { return }
             let session = AVCaptureSession()
-            session.sessionPreset = .hd1920x1080
+            if session.canSetSessionPreset(.hd1920x1080) {
+                session.sessionPreset = .hd1920x1080
+            } else {
+                session.sessionPreset = .high
+            }
 
             let discovery = AVCaptureDevice.DiscoverySession(
-                deviceTypes: [.builtInUltraWideCamera, .builtInWideAngleCamera],
+                deviceTypes: [.builtInWideAngleCamera, .builtInUltraWideCamera],
                 mediaType: .video,
                 position: .back
             )
-            guard let camera = discovery.devices.first,
+            let camera = discovery.devices.first
+                ?? AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
+                ?? AVCaptureDevice.default(for: .video)
+
+            guard let camera = camera,
                   let videoInput = try? AVCaptureDeviceInput(device: camera),
                   session.canAddInput(videoInput) else {
+                NSLog("[Dashcam] Failed to create video input from back camera")
                 return
             }
             session.addInput(videoInput)
@@ -65,8 +90,15 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
 
             let output = AVCaptureMovieFileOutput()
             output.maxRecordedDuration = CMTime(seconds: 300, preferredTimescale: 600)
-            guard session.canAddOutput(output) else { return }
+            guard session.canAddOutput(output) else {
+                NSLog("[Dashcam] Cannot add movie output to session")
+                return
+            }
             session.addOutput(output)
+
+            if let conn = output.connection(with: .video), conn.isVideoOrientationSupported {
+                conn.videoOrientation = .landscapeRight
+            }
 
             session.startRunning()
 
@@ -77,6 +109,7 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
                 pLayer.videoGravity = .resizeAspectFill
                 self.previewLayer = pLayer
                 self.isRecording = true
+                self.recordingStartTime = Date()
                 self.startNextSegment()
                 self.impactService.startMonitoring()
             }
@@ -90,12 +123,13 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
             guard let self = self else { return }
             self.movieOutput?.stopRecording()
             self.captureSession?.stopRunning()
-            self.captureSession = nil
             self.movieOutput = nil
 
             DispatchQueue.main.async {
+                self.captureSession = nil
                 self.isRecording = false
                 self.previewLayer = nil
+                self.recordingStartTime = nil
                 self.impactService.stopMonitoring()
             }
         }

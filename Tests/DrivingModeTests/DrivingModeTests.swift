@@ -91,6 +91,13 @@ final class DrivingModeTests: XCTestCase {
         XCTAssertEqual(config.impactSensitivityG, 2.5, accuracy: 0.01)
     }
 
+    func testDashcamManagerInitialState() {
+        let manager = DashcamManager.shared
+        XCTAssertFalse(manager.isRecording)
+        XCTAssertNil(manager.captureSession)
+        XCTAssertNil(manager.recordingStartTime)
+    }
+
     func testDashcamStorageManagerCreationAndPruning() throws {
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let storage = DashcamStorageManager(baseDirectory: tempDir, quotaBytes: 10 * 1024 * 1024) // 10 MB quota for test

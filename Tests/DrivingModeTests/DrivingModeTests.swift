@@ -370,4 +370,54 @@ final class DrivingModeTests: XCTestCase {
         XCTAssertEqual(AirPlayAudioReceiver.dbToLinear(-30.0), 0.031, accuracy: 0.01)
         XCTAssertEqual(AirPlayAudioReceiver.dbToLinear(-144.0), 0.0, accuracy: 0.001)
     }
+
+    func testRTSPMultiStreamSetupResponse() {
+        let server = RTSPServer(port: 7000)
+        let requestStreams: [[String: Any]] = [
+            ["type": 110, "streamConnectionID": 1111],
+            ["type": 100, "streamConnectionID": 2222],
+            ["type": 101, "streamConnectionID": 3333]
+        ]
+        let requestPlist: [String: Any] = ["streams": requestStreams]
+        let bodyData = try! PropertyListSerialization.data(fromPropertyList: requestPlist, format: .binary, options: 0)
+
+        let responseDict = server.buildStreamSetupResponse(for: bodyData)
+        guard let responseStreams = responseDict["streams"] as? [[String: Any]] else {
+            XCTFail("Missing streams key in response")
+            return
+        }
+
+        XCTAssertEqual(responseStreams.count, 3)
+        let types = responseStreams.compactMap { $0["type"] as? Int }
+        XCTAssertTrue(types.contains(110))
+        XCTAssertTrue(types.contains(100))
+        XCTAssertTrue(types.contains(101))
+
+        // Verify ports assigned
+        let videoStream = responseStreams.first { ($0["type"] as? Int) == 110 }
+        let videoPort = videoStream?["dataPort"] as? Int
+        XCTAssertEqual(videoPort, 7100)
+
+        let mainAudio = responseStreams.first { ($0["type"] as? Int) == 100 }
+        let mainDataPort = mainAudio?["dataPort"] as? Int
+        let mainControlPort = mainAudio?["controlPort"] as? Int
+        XCTAssertEqual(mainDataPort, 7001)
+        XCTAssertEqual(mainControlPort, 7003)
+
+        let altAudio = responseStreams.first { ($0["type"] as? Int) == 101 }
+        let altDataPort = altAudio?["dataPort"] as? Int
+        let altControlPort = altAudio?["controlPort"] as? Int
+        XCTAssertEqual(altDataPort, 7002)
+        XCTAssertEqual(altControlPort, 7004)
+    }
+
+    func testRTSPVolumeParameterParsing() {
+        let paramBody = "volume: -15.500000\r\n"
+        let volume = RTSPServer.parseVolumeParameter(paramBody)
+        XCTAssertNotNil(volume)
+        XCTAssertEqual(Double(volume ?? 0), -15.5, accuracy: 0.01)
+
+        let invalidBody = "status: ok\r\n"
+        XCTAssertNil(RTSPServer.parseVolumeParameter(invalidBody))
+    }
 }

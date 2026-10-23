@@ -144,6 +144,7 @@ public final class RTSPServer: @unchecked Sendable {
     }
 
     public func stop() {
+        AirPlayAudioReceiver.shared.stop()
         resetSession()
         listener?.cancel()
         listener = nil
@@ -320,7 +321,7 @@ public final class RTSPServer: @unchecked Sendable {
         case "TEARDOWN":
             handleTeardown(cseq: cseq, connection: connection)
         case "GET_PARAMETER", "SET_PARAMETER":
-            handleParameter(cseq: cseq, connection: connection)
+            handleParameter(cseq: cseq, bodyData: bodyData, lines: lines, connection: connection)
         case "POST":
             handlePost(cseq: cseq, uri: uri, bodyData: bodyData, connection: connection)
         default:
@@ -387,15 +388,12 @@ public final class RTSPServer: @unchecked Sendable {
                     }
                 }
             }
-            // CSeq 11: Screen/Video(110) stream setup -> route H.264 to port 7100
-            let respDict: [String: Any] = [
-                "streams": [
-                    [
-                        "dataPort": 7100,
-                        "type": 110
-                    ]
-                ]
-            ]
+            // Build multi-stream response for all requested video and audio streams
+            let respDict = buildStreamSetupResponse(for: bodyData)
+            if let streams = respDict["streams"] as? [[String: Any]],
+               streams.contains(where: { [100, 101, 102, 106].contains(($0["type"] as? Int) ?? 0) }) {
+                try? AirPlayAudioReceiver.shared.start()
+            }
             let body = (try? PropertyListSerialization.data(fromPropertyList: respDict, format: .binary, options: 0)) ?? Data()
             let headers = [
                 "Content-Type": "application/x-apple-binary-plist"
@@ -638,12 +636,93 @@ public final class RTSPServer: @unchecked Sendable {
     }
 
     private func handleTeardown(cseq: String, connection: NWConnection) {
+        AirPlayAudioReceiver.shared.stop()
         delegate?.rtspServerDidEndSession()
         sendResponse(status: "200 OK", cseq: cseq, headers: [:], body: nil, connection: connection)
     }
 
-    private func handleParameter(cseq: String, connection: NWConnection) {
+    private func handleParameter(cseq: String, bodyData: Data, lines: [String], connection: NWConnection) {
+        var volumeFound = false
+        if !bodyData.isEmpty, let bodyText = String(data: bodyData, encoding: .utf8) {
+            if let volume = Self.parseVolumeParameter(bodyText) {
+                AirPlayAudioReceiver.shared.setRTSPDbVolume(volume)
+                volumeFound = true
+                NSLog("[DrivingMode][RTSP] SET_PARAMETER volume set from body: %f dB", volume)
+            }
+        }
+        if !volumeFound {
+            for line in lines {
+                if let volume = Self.parseVolumeParameter(line) {
+                    AirPlayAudioReceiver.shared.setRTSPDbVolume(volume)
+                    NSLog("[DrivingMode][RTSP] SET_PARAMETER volume set from line: %f dB", volume)
+                    break
+                }
+            }
+        }
         sendResponse(status: "200 OK", cseq: cseq, headers: [:], body: nil, connection: connection)
+    }
+
+    public func buildStreamSetupResponse(for bodyData: Data) -> [String: Any] {
+        var responseStreams: [[String: Any]] = []
+
+        if let plist = try? PropertyListSerialization.propertyList(from: bodyData, options: [], format: nil) as? [String: Any],
+           let streams = plist["streams"] as? [[String: Any]] {
+            for stream in streams {
+                guard let type = (stream["type"] as? NSNumber)?.intValue else { continue }
+                switch type {
+                case 110:
+                    responseStreams.append([
+                        "type": 110,
+                        "dataPort": 7100
+                    ])
+                case 100, 102:
+                    responseStreams.append([
+                        "type": type,
+                        "dataPort": 7001,
+                        "controlPort": 7003,
+                        "audioBufferSize": 8192
+                    ])
+                case 101, 106:
+                    responseStreams.append([
+                        "type": type,
+                        "dataPort": 7002,
+                        "controlPort": 7004,
+                        "audioBufferSize": 8192
+                    ])
+                default:
+                    responseStreams.append([
+                        "type": type,
+                        "dataPort": 7000
+                    ])
+                }
+            }
+        }
+
+        if responseStreams.isEmpty {
+            responseStreams = [
+                [
+                    "type": 110,
+                    "dataPort": 7100
+                ]
+            ]
+        }
+
+        return ["streams": responseStreams]
+    }
+
+    public static func parseVolumeParameter(_ text: String) -> Float? {
+        let lines = text.components(separatedBy: "\r\n")
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            let lower = trimmed.lowercased()
+            if lower.hasPrefix("volume:") {
+                let valStr = trimmed.dropFirst(7).trimmingCharacters(in: .whitespaces)
+                if let val = Float(valStr) {
+                    return val
+                }
+            }
+        }
+        return nil
     }
 
     private func handlePost(cseq: String, uri: String, bodyData: Data, connection: NWConnection) {

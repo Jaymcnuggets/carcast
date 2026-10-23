@@ -325,20 +325,6 @@ public struct SettingsView: View {
                     Text("Records rolling 5-minute clips in the background while CarPlay runs. Sudden G-force impacts automatically lock footage into Emergency storage.")
                 }
 
-                // MARK: - Section: Windshield Night HUD
-                Section {
-                    Toggle(isOn: $config.isHUDMirrored) {
-                        HStack(spacing: 12) {
-                            settingsIcon(systemName: "arrow.left.and.right.righttriangle.left.righttriangle.right", color: .cyan)
-                            Text("Mirror for Windshield Glass")
-                        }
-                    }
-                } header: {
-                    Text("Windshield Night HUD")
-                } footer: {
-                    Text("Flips the HUD horizontally so when your device is placed flat on your dashboard, the reflection in the glass is readable.")
-                }
-
                 // MARK: - Section 5: Modes
                 Section {
                     Toggle(isOn: $androidAutoEnabled) {

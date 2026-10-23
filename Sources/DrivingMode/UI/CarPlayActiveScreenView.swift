@@ -17,7 +17,6 @@ public struct CarPlayActiveScreenView: View {
     @ObservedObject var dashcam = DashcamManager.shared
 
     @State private var touchIndicatorPoint: CGPoint? = nil
-    @State private var showingHUDSheet: Bool = false
 
     public init() {}
 
@@ -49,41 +48,24 @@ public struct CarPlayActiveScreenView: View {
                 VStack {
                     HStack {
                         // Quick Action Buttons
-                        HStack(spacing: 8) {
+                        if dashcam.isRecording {
                             Button {
-                                showingHUDSheet = true
+                                dashcam.saveCurrentEvent(reason: "CarPlay Screen")
                             } label: {
                                 HStack(spacing: 5) {
-                                    Image(systemName: "windshield.front.and.heat.waves")
-                                    Text("HUD")
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                    Text("LOCK CLIP")
                                 }
                                 .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                .foregroundColor(.white)
+                                .foregroundColor(.yellow)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
                                 .background(Color.black.opacity(0.65))
                                 .cornerRadius(12)
                             }
-
-                            if dashcam.isRecording {
-                                Button {
-                                    dashcam.saveCurrentEvent(reason: "CarPlay Screen")
-                                } label: {
-                                    HStack(spacing: 5) {
-                                        Image(systemName: "exclamationmark.triangle.fill")
-                                        Text("LOCK CLIP")
-                                    }
-                                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.yellow)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Color.black.opacity(0.65))
-                                    .cornerRadius(12)
-                                }
-                            }
+                            .padding(.leading, 20)
+                            .padding(.top, 10)
                         }
-                        .padding(.leading, 20)
-                        .padding(.top, 10)
 
                         Spacer()
 
@@ -144,9 +126,6 @@ public struct CarPlayActiveScreenView: View {
         #if os(iOS)
         .statusBarHidden(true)
         #endif
-        .sheet(isPresented: $showingHUDSheet) {
-            WindshieldHUDView()
-        }
         .onAppear {
             if manager.state == .idle {
                 manager.startReceiver()

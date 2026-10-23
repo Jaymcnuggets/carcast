@@ -219,14 +219,6 @@ public final class DrivingModeConfig: ObservableObject {
         didSet { defaults.set(impactSensitivityG, forKey: "drivingmode.dashcam.impact_sensitivity_g") }
     }
 
-    @Published public var isHUDModeEnabled: Bool {
-        didSet { defaults.set(isHUDModeEnabled, forKey: "drivingmode.hud.enabled") }
-    }
-
-    @Published public var isHUDMirrored: Bool {
-        didSet { defaults.set(isHUDMirrored, forKey: "drivingmode.hud.mirrored") }
-    }
-
     public var deviceIdUInt64: UInt64 {
         let clean = deviceId.replacingOccurrences(of: ":", with: "")
         return UInt64(clean, radix: 16) ?? 0x02554E445256
@@ -331,8 +323,6 @@ public final class DrivingModeConfig: ObservableObject {
         self.dashcamStorageLimitMB = storedLimit > 0 ? storedLimit : 3072
         let storedSens = defaults.double(forKey: "drivingmode.dashcam.impact_sensitivity_g")
         self.impactSensitivityG = storedSens > 0 ? storedSens : 2.5
-        self.isHUDModeEnabled = defaults.bool(forKey: "drivingmode.hud.enabled")
-        self.isHUDMirrored = defaults.object(forKey: "drivingmode.hud.mirrored") != nil ? defaults.bool(forKey: "drivingmode.hud.mirrored") : true
 
         AirPlayAudioReceiver.shared.isPassthroughMode = (resolvedAudioMode == .carBluetoothPassthrough)
     }
@@ -362,7 +352,5 @@ public final class DrivingModeConfig: ObservableObject {
         isDashcamAudioEnabled = false
         dashcamStorageLimitMB = 3072
         impactSensitivityG = 2.5
-        isHUDModeEnabled = false
-        isHUDMirrored = true
     }
 }

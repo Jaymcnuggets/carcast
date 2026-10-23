@@ -126,6 +126,10 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
 
     public func startReceiver() {
         if isStreamingActive { return }
+        #if targetEnvironment(simulator)
+        startLocalSimulation()
+        return
+        #else
         transitionState(
             to: .starting,
             reason: "Starting RTSP (:7000), AirPlay Screen (:7100), BLE Advertiser, and ACCTransport Lockdown",
@@ -181,6 +185,7 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
                 detail: error.localizedDescription
             )
         }
+        #endif
     }
 
     private var simulationTimer: Timer?
@@ -206,9 +211,11 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
 
     public func startLocalSimulation() {
         isSimulating = true
+        #if !targetEnvironment(simulator)
         if state == .idle || state == .error {
             startReceiver()
         }
+        #endif
 
         isStreamingActive = true
         transitionState(

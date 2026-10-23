@@ -28,8 +28,10 @@ targets:
       - path: Resources/Logos
         type: folder
         buildPhase: resources
-      - path: Resources/AppIcon
+      - path: Resources/CarPlayScreens
         type: folder
+        buildPhase: resources
+      - path: Resources/Assets.xcassets
         buildPhase: resources
     settings:
       base:

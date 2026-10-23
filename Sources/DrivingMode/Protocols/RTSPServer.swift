@@ -833,7 +833,9 @@ public final class RTSPServer: @unchecked Sendable {
         queue.async {
             let connection = self.eventConnection ?? self.activeConnections.last(where: { self.ciphers[ObjectIdentifier($0)] != nil }) ?? self.activeConnections.last
             guard connection != nil else {
+                #if !targetEnvironment(simulator)
                 NSLog("[DrivingMode][RTSP] Cannot send touch — no active connection")
+                #endif
                 return
             }
 

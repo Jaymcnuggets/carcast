@@ -87,6 +87,25 @@ public enum NightModeSetting: String, Codable, CaseIterable, Sendable {
     }
 }
 
+public enum AudioRoutingMode: String, Codable, CaseIterable, Sendable {
+    case airPlayInBand = "in_band"
+    case carBluetoothPassthrough = "bluetooth_passthrough"
+
+    public var title: String {
+        switch self {
+        case .airPlayInBand: return "In-Band AirPlay (Speaker / AUX)"
+        case .carBluetoothPassthrough: return "Car Bluetooth Passthrough"
+        }
+    }
+
+    public var subtitle: String {
+        switch self {
+        case .airPlayInBand: return "Receiver plays media & Siri with auto-ducking"
+        case .carBluetoothPassthrough: return "iPhone streams audio to car Bluetooth stereo"
+        }
+    }
+}
+
 @MainActor
 public final class DrivingModeConfig: ObservableObject {
     public static let shared = DrivingModeConfig()
@@ -137,6 +156,13 @@ public final class DrivingModeConfig: ObservableObject {
 
     @Published public var playSoundLocally: Bool {
         didSet { defaults.set(playSoundLocally, forKey: "drivingmode.audio.play_local") }
+    }
+
+    @Published public var audioRoutingMode: AudioRoutingMode {
+        didSet {
+            defaults.set(audioRoutingMode.rawValue, forKey: "drivingmode.audio.routing")
+            AirPlayAudioReceiver.shared.isPassthroughMode = (audioRoutingMode == .carBluetoothPassthrough)
+        }
     }
 
     @Published public var instrumentClusterMode: ClusterContentMode {
@@ -240,6 +266,15 @@ public final class DrivingModeConfig: ObservableObject {
 
         self.playSoundLocally = defaults.object(forKey: "drivingmode.audio.play_local") as? Bool ?? true
 
+        let resolvedAudioMode: AudioRoutingMode
+        if let arStr = defaults.string(forKey: "drivingmode.audio.routing"),
+           let ar = AudioRoutingMode(rawValue: arStr) {
+            resolvedAudioMode = ar
+        } else {
+            resolvedAudioMode = .airPlayInBand
+        }
+        self.audioRoutingMode = resolvedAudioMode
+
         if let cmStr = defaults.string(forKey: "drivingmode.cluster.mode"),
            let cm = ClusterContentMode(rawValue: cmStr) {
             self.instrumentClusterMode = cm
@@ -265,6 +300,8 @@ public final class DrivingModeConfig: ObservableObject {
             self.wifiPassphrase = defaults.string(forKey: "drivingmode.wifi.passphrase") ?? ""
         }
         self.wifiChannel = defaults.object(forKey: "drivingmode.wifi.channel") as? Int ?? 6
+
+        AirPlayAudioReceiver.shared.isPassthroughMode = (resolvedAudioMode == .carBluetoothPassthrough)
     }
 
     public func resetToDefaults() {

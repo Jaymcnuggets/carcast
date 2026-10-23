@@ -217,6 +217,20 @@ public struct SettingsView: View {
                     Text("Fit this screen uses this device's own screen size. Video playback lets apps show video while parked. Show touches marks each tap, for screen recordings.")
                 }
 
+                // MARK: - Section: Audio Routing
+                Section {
+                    Picker("Audio Output", selection: $config.audioRoutingMode) {
+                        ForEach(AudioRoutingMode.allCases, id: \.self) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                } header: {
+                    Text("Audio Routing")
+                } footer: {
+                    Text(config.audioRoutingMode.subtitle)
+                }
+
                 // MARK: - Section 4: Instrument Cluster
                 Section {
                     Toggle(isOn: $config.carPlayUltraEnabled) {

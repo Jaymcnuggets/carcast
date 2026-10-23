@@ -420,4 +420,16 @@ final class DrivingModeTests: XCTestCase {
         let invalidBody = "status: ok\r\n"
         XCTAssertNil(RTSPServer.parseVolumeParameter(invalidBody))
     }
+
+    @MainActor
+    func testAudioRoutingModeConfigPersistence() {
+        let config = DrivingModeConfig.shared
+        config.audioRoutingMode = .carBluetoothPassthrough
+        XCTAssertEqual(config.audioRoutingMode, .carBluetoothPassthrough)
+        XCTAssertTrue(AirPlayAudioReceiver.shared.isPassthroughMode)
+
+        config.audioRoutingMode = .airPlayInBand
+        XCTAssertEqual(config.audioRoutingMode, .airPlayInBand)
+        XCTAssertFalse(AirPlayAudioReceiver.shared.isPassthroughMode)
+    }
 }

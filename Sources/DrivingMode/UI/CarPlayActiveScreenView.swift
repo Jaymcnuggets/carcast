@@ -54,6 +54,11 @@ public struct CarPlayActiveScreenView: View {
                             Text("CarPlay \(manager.isStreamingActive ? "Live" : "Waiting") (\(manager.totalFramesReceived) frames)")
                                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
                                 .foregroundColor(.white)
+                            Text("•")
+                                .foregroundColor(.white.opacity(0.4))
+                            Text(config.audioRoutingMode == .airPlayInBand ? "IN-BAND AUDIO" : "BT PASSTHROUGH")
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundColor(config.audioRoutingMode == .airPlayInBand ? .cyan : .yellow)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)

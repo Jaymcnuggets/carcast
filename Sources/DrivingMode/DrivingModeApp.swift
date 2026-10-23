@@ -6,17 +6,35 @@
 //
 
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+
+public final class AppDelegate: NSObject, UIApplicationDelegate {
+    public func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        return .landscape
+    }
+}
+#endif
 
 #if !SWIFT_PACKAGE
 @main
 #endif
 struct DrivingModeApp: App {
+    #if canImport(UIKit)
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    #endif
     @StateObject private var manager = CarPlayManager.shared
     @StateObject private var config = DrivingModeConfig.shared
     @StateObject private var telemetry = VehicleTelemetry.shared
 
+    init() {
+        #if canImport(UIKit)
+        UIApplication.shared.isIdleTimerDisabled = true
+        #endif
+    }
+
     private var initialScreen: String? {
-        if let env = ProcessInfo.processInfo.environment["DRIVINGMODE_SCREEN"] ?? ProcessInfo.processInfo.environment["CARCAST_SCREEN"], !env.isEmpty {
+        if let env = ProcessInfo.processInfo.environment["DRIVINGMODE_SCREEN"], !env.isEmpty {
             return env.lowercased()
         }
         let args = ProcessInfo.processInfo.arguments
@@ -47,6 +65,17 @@ struct DrivingModeApp: App {
                 }
             }
             .preferredColorScheme(.dark)
+            .onAppear {
+                #if canImport(UIKit)
+                DispatchQueue.main.async {
+                    if let windowScene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene ?? UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                        windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscape)) { error in
+                            NSLog("[DrivingMode] requestGeometryUpdate error: %@", error.localizedDescription)
+                        }
+                    }
+                }
+                #endif
+            }
         }
     }
 }

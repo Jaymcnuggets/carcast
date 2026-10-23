@@ -58,8 +58,8 @@ final class DrivingModeTests: XCTestCase {
     func testIdentificationPayloadGeneration() {
         let engine = iAP2ProtocolEngine()
         let payload = engine.buildIdentificationPayload(
-            carName: "CarCast-TEST",
-            macAddress: "02:00:11:22:33:44",
+            carName: "DrivingMode-TEST",
+            macAddress: "02:55:4E:22:33:44",
             wifiSSID: "TestWiFi",
             wifiPassword: "SecretPassword123",
             wifiChannel: 36,
@@ -76,7 +76,7 @@ final class DrivingModeTests: XCTestCase {
     func testConfigDefaults() {
         let config = DrivingModeConfig.shared
         XCTAssertFalse(config.carName.isEmpty)
-        XCTAssertTrue(config.carName.hasPrefix("DrivingMode-") || config.carName.hasPrefix("CarCast-"))
+        XCTAssertTrue(config.carName.hasPrefix("DrivingMode"))
         XCTAssertEqual(config.displayPreset, .fitScreen)
         XCTAssertEqual(config.drivingPosition, .leftHandDrive)
     }
@@ -98,26 +98,18 @@ final class DrivingModeTests: XCTestCase {
     }
 
     func testAirPlayScreenHeaderParsing() {
-        var headerData = Data()
-        let length: UInt32 = 256
-        let opcode: UInt16 = 0x0001 // SPS/PPS
-        let reserved: UInt16 = 0
-
-        headerData.append(UInt8((length >> 24) & 0xFF))
-        headerData.append(UInt8((length >> 16) & 0xFF))
-        headerData.append(UInt8((length >> 8) & 0xFF))
-        headerData.append(UInt8(length & 0xFF))
-
-        headerData.append(UInt8((opcode >> 8) & 0xFF))
-        headerData.append(UInt8(opcode & 0xFF))
-
-        headerData.append(UInt8((reserved >> 8) & 0xFF))
-        headerData.append(UInt8(reserved & 0xFF))
+        // Real CarPlay screen header: 128 bytes, little-endian payload size + payload type (1 = avcC codec config)
+        var headerData = Data(count: AirPlayScreenHeader.size)
+        headerData[0] = 0x29 // 41-byte avcC payload
+        headerData[4] = 0x01
+        headerData[6] = 0x16
+        headerData[7] = 0x01
 
         let parsed = AirPlayScreenHeader.parse(from: headerData)
         XCTAssertNotNil(parsed)
-        XCTAssertEqual(parsed?.payloadLength, 256)
+        XCTAssertEqual(parsed?.payloadLength, 41)
         XCTAssertEqual(parsed?.opcode, .videoConfig)
+        XCTAssertEqual(parsed?.flags, 0x0116)
     }
 
     @MainActor
@@ -142,12 +134,12 @@ final class DrivingModeTests: XCTestCase {
 
     func testWiFiBonjourBroadcastAndDiscovery() async throws {
         let advertiser = AirPlayBonjourAdvertiser(port: 7000)
-        let testName = "CarCast-UnitTest-\(UUID().uuidString.prefix(6))"
-        advertiser.startAdvertising(name: testName, deviceId: "02:00:AA:BB:CC:DD")
+        let testName = "DrivingMode-UnitTest-\(UUID().uuidString.prefix(6))"
+        advertiser.startAdvertising(name: testName, deviceId: "02:55:4E:BB:CC:DD")
 
         let exp = expectation(description: "Bonjour service discovered over local network")
 
-        let descriptor = NWBrowser.Descriptor.bonjour(type: "_carcast._tcp.", domain: "local.")
+        let descriptor = NWBrowser.Descriptor.bonjour(type: "_drivingmode._tcp.", domain: "local.")
         let params = NWParameters()
         params.includePeerToPeer = true
         let browser = NWBrowser(for: descriptor, using: params)
@@ -243,7 +235,7 @@ final class DrivingModeTests: XCTestCase {
     }
 
     @MainActor
-    func testScrapedCarCastThisiPhoneSequence() async throws {
+    func testDrivingModeThisiPhoneSequence() async throws {
         // 1. Authenticate Wi-Fi credential handling
         let wifi = WiFiNetworkService.shared
         let testSSID = "HiFi"
@@ -308,7 +300,7 @@ final class DrivingModeTests: XCTestCase {
         wifi.forgetPassword(for: testSSID)
     }
 
-    func testAuthenticCarCastAirPlayInfoAndConnectProbe() throws {
+    func testAuthenticDrivingModeAirPlayInfoAndConnectProbe() throws {
         // 1. Test RTSP /info binary plist generation
         let server = RTSPServer(port: 7001)
         try server.start()
@@ -317,7 +309,7 @@ final class DrivingModeTests: XCTestCase {
         let probe = "GET /ctrl-int/1/connect HTTP/1.1\r\n" +
             "Host: 127.0.0.1:7100\r\n" +
             "User-Agent: AirPlay/377.17.24.6\r\n" +
-            "AirPlay-Receiver-Device-ID: 9AA97231CA9A\r\n" +
+            "AirPlay-Receiver-Device-ID: 02554E445256\r\n" +
             "Connection: close\r\n\r\n"
         XCTAssertTrue(probe.contains("/ctrl-int/1/connect"))
         XCTAssertTrue(probe.contains("AirPlay-Receiver-Device-ID"))

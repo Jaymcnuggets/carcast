@@ -1,6 +1,6 @@
 //
 //  iAP2ProtocolEngine.swift
-//  CarCast
+//  DrivingMode
 //
 //  Authentic MFi iAP2 protocol state machine, packet framing, and CarPlay accessory identification.
 //
@@ -45,9 +45,9 @@ public struct iAP2Packet {
         data.append(ackSeqNumber)
         data.append(sessionID)
 
-        // Header checksum: 2's complement sum of header bytes from length to sessionID
+        // Header checksum: 2's complement sum of all 8 header bytes data[0..<8]
         var headerSum: UInt32 = 0
-        for byte in data[2..<8] {
+        for byte in data[0..<8] {
             headerSum += UInt32(byte)
         }
         let headerChecksum = UInt8((~headerSum + 1) & 0xFF)
@@ -161,12 +161,12 @@ public final class iAP2ProtocolEngine: @unchecked Sendable {
 
         // Param 0: Name
         appendParam(to: &payload, paramId: 0x0000, string: carName)
-        // Param 1: Model ("MI-0001")
-        appendParam(to: &payload, paramId: 0x0001, string: "MI-0001")
-        // Param 2: Manufacturer ("rPlay")
-        appendParam(to: &payload, paramId: 0x0002, string: "rPlay")
-        // Param 3: Serial ("SN-202610210001")
-        appendParam(to: &payload, paramId: 0x0003, string: "SN-202610210001")
+        // Param 1: Model ("DrivingMode")
+        appendParam(to: &payload, paramId: 0x0001, string: "DrivingMode")
+        // Param 2: Manufacturer ("Unordinary Labs")
+        appendParam(to: &payload, paramId: 0x0002, string: "Unordinary Labs")
+        // Param 3: Serial ("DM-202610220001")
+        appendParam(to: &payload, paramId: 0x0003, string: "DM-202610220001")
         // Param 4: FirmwareVersion ("1.0.0")
         appendParam(to: &payload, paramId: 0x0004, string: "1.0.0")
         // Param 5: HardwareVersion ("1.0.0")
@@ -209,15 +209,15 @@ public final class iAP2ProtocolEngine: @unchecked Sendable {
         payload.append(0x43)
         payload.append(0x01)
 
-        // Param 0x0002: Port (4-byte UInt32 big-endian matching authentic libcarcast disassembly at 0x32b088)
+        // Param 0x0002: Port (4-byte UInt32 big-endian)
         var portBe = UInt32(port).bigEndian
         let portData = Data(bytes: &portBe, count: 4)
         appendParam(to: &payload, paramId: 0x0002, data: portData)
 
-        // Param 0x0003: IP Address (null-terminated string matching 0x32b0bc)
+        // Param 0x0003: IP Address (null-terminated string)
         appendNullTerminatedParam(to: &payload, paramId: 0x0003, string: ip)
 
-        // Param 0x0004: Device ID (null-terminated string matching 0x32b0e0)
+        // Param 0x0004: Device ID (null-terminated string)
         appendNullTerminatedParam(to: &payload, paramId: 0x0004, string: deviceId)
 
         // Param 0x0006: Source Version matching 0x32b150

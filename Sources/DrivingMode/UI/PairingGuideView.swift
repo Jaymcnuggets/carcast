@@ -1,6 +1,6 @@
 //
 //  PairingGuideView.swift
-//  CarCast
+//  DrivingMode
 //
 //  Step-by-step wireless CarPlay and AirPlay pairing guide with troubleshooting diagnostics.
 //
@@ -50,7 +50,7 @@ public struct PairingGuideView: View {
                         StepCard(
                             stepNumber: 4,
                             title: "Enjoy Wireless CarPlay",
-                            description: "CarCast will automatically authenticate the iAP2 handshake, negotiate video transport over port 7100, and display your CarPlay dashboard.",
+                            description: "DrivingMode will automatically authenticate the iAP2 handshake, negotiate video transport over port 7100, and display your CarPlay dashboard.",
                             icon: "checkmark.circle.fill",
                             accent: .green
                         )
@@ -146,7 +146,7 @@ public struct PairingGuideView: View {
 
                 TroubleRow(
                     question: "Wi-Fi channel interference?",
-                    answer: "In CarCast Settings, set Wi-Fi Channel to 36 or 40 (5 GHz) to avoid 2.4 GHz congestion with Bluetooth."
+                    answer: "In DrivingMode Settings, set Wi-Fi Channel to 36 or 40 (5 GHz) to avoid 2.4 GHz congestion with Bluetooth."
                 )
 
                 TroubleRow(
@@ -156,7 +156,7 @@ public struct PairingGuideView: View {
 
                 TroubleRow(
                     question: "Testing on a single device?",
-                    answer: "Tap 'This iPhone' on the CarCast dashboard to launch local loopback simulation without needing a second phone."
+                    answer: "Tap 'This iPhone' on the DrivingMode dashboard to launch local loopback simulation without needing a second phone."
                 )
             }
             .padding(.horizontal, 20)

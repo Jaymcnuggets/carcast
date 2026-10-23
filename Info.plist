@@ -34,7 +34,6 @@
 	<array>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
-		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -50,7 +49,9 @@
 		<string>_airplay._tcp</string>
 		<string>_airplayserver._tcp</string>
 		<string>_carplay._tcp</string>
-		<string>_carcast._tcp</string>
+		<string>_carplay-ctrl._tcp</string>
+		<string>_drivingmode._tcp</string>
+		<string>_drivingmode-hu._tcp</string>
 		<string>_raop._tcp</string>
 	</array>
 	<key>UIBackgroundModes</key>

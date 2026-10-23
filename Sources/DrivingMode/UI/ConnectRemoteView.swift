@@ -1,8 +1,8 @@
 //
 //  ConnectRemoteView.swift
-//  CarCast
+//  DrivingMode
 //
-//  Discovers nearby CarCast displays and connects CarPlay.
+//  Discovers nearby DrivingMode displays and connects CarPlay.
 //
 
 import SwiftUI

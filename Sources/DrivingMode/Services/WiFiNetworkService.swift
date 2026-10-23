@@ -1,6 +1,6 @@
 //
 //  WiFiNetworkService.swift
-//  CarCast
+//  DrivingMode
 //
 //  Real iOS Wi-Fi Network Detection and Keychain Password Management:
 //  - Queries current connected Wi-Fi SSID via NEHotspotNetwork and CNCopyCurrentNetworkInfo
@@ -33,28 +33,45 @@ public final class WiFiNetworkService: NSObject, ObservableObject, CLLocationMan
     @Published public var isConnectedToWiFi: Bool = false
     @Published public var isLocationAuthorized: Bool = false
 
-    public var currentIPAddress: String? {
-        var address: String?
+    /// All up/running, non-loopback IPv4 interfaces as (interfaceName, address), in getifaddrs order.
+    public var ipv4Interfaces: [(name: String, address: String)] {
+        var result: [(name: String, address: String)] = []
         var ifaddr: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&ifaddr) == 0, let firstAddr = ifaddr else { return nil }
+        guard getifaddrs(&ifaddr) == 0, let firstAddr = ifaddr else { return [] }
         defer { freeifaddrs(ifaddr) }
 
         for ptr in sequence(first: firstAddr, next: { $0.pointee.ifa_next }) {
             let flags = Int32(ptr.pointee.ifa_flags)
-            let addr = ptr.pointee.ifa_addr.pointee
+            guard let sa = ptr.pointee.ifa_addr else { continue }
+            let addr = sa.pointee
 
             // Check for running IPv4 interface that is up and not loopback
-            if (flags & (IFF_UP | IFF_RUNNING | IFF_LOOPBACK)) == (IFF_UP | IFF_RUNNING) {
-                if addr.sa_family == UInt8(AF_INET) {
-                    var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-                    if getnameinfo(ptr.pointee.ifa_addr, socklen_t(addr.sa_len), &hostname, socklen_t(hostname.count), nil, 0, NI_NUMERICHOST) == 0 {
-                        address = String(cString: hostname)
-                        break
-                    }
+            if (flags & (IFF_UP | IFF_RUNNING | IFF_LOOPBACK)) == (IFF_UP | IFF_RUNNING),
+               addr.sa_family == UInt8(AF_INET) {
+                var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                if getnameinfo(sa, socklen_t(addr.sa_len), &hostname, socklen_t(hostname.count), nil, 0, NI_NUMERICHOST) == 0 {
+                    result.append((String(cString: ptr.pointee.ifa_name), String(cString: hostname)))
                 }
             }
         }
-        return address
+        return result
+    }
+
+    /// Wi-Fi LAN IPv4 address used for CarPlay RTSP (0x4301 wifiIP/usbIP).
+    /// Prefers en0 (Wi-Fi), then other en*/bridge* interfaces. VPN tunnels (utun*/ipsec*, e.g. Tailscale 100.64.0.0/10)
+    /// and cellular (pdp_ip*) are skipped, because CarPlay connects back to this address over the local network.
+    public var currentIPAddress: String? {
+        let interfaces = ipv4Interfaces
+        if let en0 = interfaces.first(where: { $0.name == "en0" }) { return en0.address }
+        if let lan = interfaces.first(where: { $0.name.hasPrefix("en") || $0.name.hasPrefix("bridge") }) { return lan.address }
+        let excludedPrefixes = ["utun", "ipsec", "pdp_ip", "llw", "awdl", "anpi"]
+        return interfaces.first(where: { iface in !excludedPrefixes.contains(where: { iface.name.hasPrefix($0) }) })?.address
+    }
+
+    /// Human-readable summary of all IPv4 interfaces for diagnostics, e.g. "en0=192.168.86.46, utun4=100.84.167.8".
+    public var ipv4InterfaceSummary: String {
+        let list = ipv4Interfaces.map { "\($0.name)=\($0.address)" }
+        return list.isEmpty ? "none" : list.joined(separator: ", ")
     }
 
     private var pendingSSIDCompletions: [(String?) -> Void] = []
@@ -231,12 +248,12 @@ public final class WiFiNetworkService: NSObject, ObservableObject, CLLocationMan
             return pwd
         }
         // Fallback to UserDefaults cache
-        return UserDefaults.standard.string(forKey: "carcast.wifi.pwd.\(ssid)")
+        return UserDefaults.standard.string(forKey: "drivingmode.wifi.pwd.\(ssid)")
     }
 
     public func savePassword(_ password: String, for ssid: String) {
         guard !ssid.isEmpty else { return }
-        UserDefaults.standard.set(password, forKey: "carcast.wifi.pwd.\(ssid)")
+        UserDefaults.standard.set(password, forKey: "drivingmode.wifi.pwd.\(ssid)")
 
         guard let data = password.data(using: .utf8) else { return }
         let query: [String: Any] = [
@@ -256,7 +273,7 @@ public final class WiFiNetworkService: NSObject, ObservableObject, CLLocationMan
 
     public func forgetPassword(for ssid: String) {
         guard !ssid.isEmpty else { return }
-        UserDefaults.standard.removeObject(forKey: "carcast.wifi.pwd.\(ssid)")
+        UserDefaults.standard.removeObject(forKey: "drivingmode.wifi.pwd.\(ssid)")
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: ssid,

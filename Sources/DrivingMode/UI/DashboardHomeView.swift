@@ -48,6 +48,16 @@ public struct DashboardHomeView: View {
     }
 
     public var body: some View {
+        Group {
+            if manager.isStreamingActive {
+                CarPlayActiveScreenView()
+            } else {
+                dashboardView
+            }
+        }
+    }
+
+    private var dashboardView: some View {
         NavigationStack {
             ZStack {
                 // Pure OLED Black Background matching authentic screenshot
@@ -56,12 +66,12 @@ public struct DashboardHomeView: View {
                 VStack(spacing: 0) {
                     Spacer(minLength: 40)
 
-                    // Central CarCast Brand Icon
-                    carCastAppIcon
+                    // Central DrivingMode Brand Icon
+                    drivingModeAppIcon
                         .frame(width: 96, height: 96)
                         .padding(.bottom, 22)
 
-                    // Car Name Title: e.g. "CarCast-D3F3"
+                    // Car Name Title: e.g. "DrivingMode"
                     Text(config.carName)
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
@@ -71,6 +81,15 @@ public struct DashboardHomeView: View {
                     Text(statusText)
                         .font(.system(size: 17, weight: .regular))
                         .foregroundColor(statusColor)
+
+                    if manager.state == .waitingForPhone || manager.state == .connecting || manager.state == .error {
+                        Text(manager.stateReason)
+                            .font(.system(size: 12, weight: .regular, design: .monospaced))
+                            .foregroundColor(Color(white: 0.48))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 28)
+                            .padding(.top, 6)
+                    }
 
                     // Authentic Centered Settings Button directly below status
                     Button {
@@ -86,6 +105,21 @@ public struct DashboardHomeView: View {
                     }
                     .padding(.top, 22)
 
+                    #if targetEnvironment(simulator)
+                    Button {
+                        manager.startLocalSimulation()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "play.tv.fill")
+                                .font(.system(size: 18, weight: .medium))
+                            Text("Simulate CarPlay Screen")
+                                .font(.system(size: 17, weight: .semibold))
+                        }
+                        .foregroundColor(.green)
+                    }
+                    .padding(.top, 14)
+                    #endif
+
                     Spacer(minLength: 60)
 
                     // Bottom Navigation Buttons matching authentic screenshot
@@ -96,15 +130,6 @@ public struct DashboardHomeView: View {
             }
             #if os(iOS)
             .toolbar(.hidden, for: .navigationBar)
-            #endif
-            #if os(iOS)
-            .fullScreenCover(isPresented: $showingActiveCarPlay) {
-                CarPlayActiveScreenView()
-            }
-            #else
-            .sheet(isPresented: $showingActiveCarPlay) {
-                CarPlayActiveScreenView()
-            }
             #endif
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
@@ -127,22 +152,25 @@ public struct DashboardHomeView: View {
                 let networkName = config.wifiSSID.isEmpty ? "your Wi-Fi network" : "\"\(config.wifiSSID)\""
                 Text("iOS requires the network password to register this car for CarPlay on \(networkName). It is stored securely on this iPhone.")
             }
-            .onChange(of: manager.isStreamingActive) { active in
-                showingActiveCarPlay = active
-            }
-            .onChange(of: manager.state) { newState in
-                if newState == .streaming {
-                    showingActiveCarPlay = true
-                } else if newState == .idle || newState == .error {
-                    showingActiveCarPlay = false
-                }
-            }
+
             .onAppear {
+                #if targetEnvironment(simulator)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    manager.startLocalSimulation()
+                }
+                #else
                 WiFiNetworkService.shared.fetchCurrentSSID { ssid in
                     if let ssid = ssid, !ssid.isEmpty {
                         config.wifiSSID = ssid
                     }
                 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    manager.stopReceiver()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        startThisiPhoneSession()
+                    }
+                }
+                #endif
             }
         }
     }
@@ -150,7 +178,7 @@ public struct DashboardHomeView: View {
     // MARK: - App Icon View
 
     @ViewBuilder
-    private var carCastAppIcon: some View {
+    private var drivingModeAppIcon: some View {
         #if canImport(UIKit)
         if let icon = UIImage(named: "AppIcon") ?? UIImage(contentsOfFile: Bundle.main.path(forResource: "AppIcon", ofType: "png") ?? "") {
             Image(uiImage: icon)

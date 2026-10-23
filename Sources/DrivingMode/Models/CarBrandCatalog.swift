@@ -1,8 +1,8 @@
 //
 //  CarBrandCatalog.swift
-//  CarCast
+//  DrivingMode
 //
-//  Authentic 114 OEM Car Brands Catalog reverse-engineered from CarCast APK.
+//  Authentic 114 OEM Car Brands Catalog.
 //
 
 import Foundation

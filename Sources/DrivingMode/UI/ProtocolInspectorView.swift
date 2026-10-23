@@ -1,6 +1,6 @@
 //
 //  ProtocolInspectorView.swift
-//  CarCast
+//  DrivingMode
 //
 //  Live Protocol Inspector for real-time iAP2, RTSP, and AirPlay packet inspection.
 //

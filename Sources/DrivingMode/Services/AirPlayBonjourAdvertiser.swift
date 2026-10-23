@@ -1,6 +1,6 @@
 //
 //  AirPlayBonjourAdvertiser.swift
-//  CarCast
+//  DrivingMode
 //
 //  Publishes Bonjour mDNS advertisements for AirPlay and CarPlay receivers.
 //
@@ -12,7 +12,7 @@ public final class AirPlayBonjourAdvertiser: NSObject, NetServiceDelegate, @unch
     private var airPlayService: NetService?
     private var raopService: NetService?
     private var carPlayService: NetService?
-    private var carCastService: NetService?
+    private var drivingModeService: NetService?
 
     private let port: Int32
 
@@ -97,25 +97,25 @@ public final class AirPlayBonjourAdvertiser: NSObject, NetServiceDelegate, @unch
         cpService.publish()
         self.carPlayService = cpService
 
-        // 4. _carcast._tcp advertisement (Peer-to-peer CarCast discovery)
-        let ccService = NetService(domain: "local.", type: "_carcast._tcp.", name: name, port: port)
-        let ccTxt: [String: String] = [
+        // 4. _drivingmode._tcp advertisement (Peer-to-peer DrivingMode discovery)
+        let dmService = NetService(domain: "local.", type: "_drivingmode._tcp.", name: name, port: port)
+        let dmTxt: [String: String] = [
             "version": "1.0",
             "name": name,
             "platform": "ios"
         ]
-        ccService.setTXTRecord(NetService.data(fromTXTRecord: ccTxt.mapValues { $0.data(using: .utf8) ?? Data() }))
-        ccService.delegate = self
-        ccService.schedule(in: .main, forMode: .common)
-        ccService.publish()
-        self.carCastService = ccService
+        dmService.setTXTRecord(NetService.data(fromTXTRecord: dmTxt.mapValues { $0.data(using: .utf8) ?? Data() }))
+        dmService.delegate = self
+        dmService.schedule(in: .main, forMode: .common)
+        dmService.publish()
+        self.drivingModeService = dmService
 
         Task { @MainActor in
             ProtocolLogger.shared.log(
                 category: .bonjour,
                 direction: .tx,
                 title: "Publishing Bonjour Services",
-                detail: "\(name) on port \(self.port) (_airplay, _raop, _carplay, _carcast)"
+                detail: "\(name) on port \(self.port) (_airplay, _raop, _carplay, _drivingmode)"
             )
         }
     }
@@ -127,8 +127,8 @@ public final class AirPlayBonjourAdvertiser: NSObject, NetServiceDelegate, @unch
         raopService = nil
         carPlayService?.stop()
         carPlayService = nil
-        carCastService?.stop()
-        carCastService = nil
+        drivingModeService?.stop()
+        drivingModeService = nil
     }
 
     // MARK: - NetServiceDelegate

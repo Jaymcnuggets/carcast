@@ -1,6 +1,6 @@
 //
 //  ProtocolMessage.swift
-//  CarCast
+//  DrivingMode
 //
 //  Structured protocol log message model for Protocol Inspector.
 //
@@ -87,6 +87,28 @@ public struct ProtocolMessage: Identifiable, Sendable {
     }
 }
 
+private let logQueue = DispatchQueue(label: "dev.unordinarylabs.drivingmode.logqueue")
+nonisolated(unsafe) private var logBuffer: [String] = []
+nonisolated(unsafe) private var lastDiskFlushTime: TimeInterval = 0
+
+public func writeAppLog(_ str: String) {
+    let line = "\(Date()) \(str)"
+    logQueue.async {
+        logBuffer.append(line)
+        if logBuffer.count > 500 {
+            logBuffer.removeFirst(logBuffer.count - 500)
+        }
+        let now = Date().timeIntervalSince1970
+        if now - lastDiskFlushTime >= 0.5 {
+            lastDiskFlushTime = now
+            guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+            let url = docs.appendingPathComponent("status.txt")
+            let full = logBuffer.joined(separator: "\n")
+            try? full.write(to: url, atomically: true, encoding: .utf8)
+        }
+    }
+}
+
 @MainActor
 public final class ProtocolLogger: ObservableObject {
     public static let shared = ProtocolLogger()
@@ -112,6 +134,7 @@ public final class ProtocolLogger: ObservableObject {
         )
         print("[\(category.title)][\(direction.title)] \(title): \(detail)")
         fflush(stdout)
+        writeAppLog("[\(category.title)][\(direction.title)] \(title): \(detail)")
         messages.append(msg)
         if messages.count > maxMessages {
             messages.removeFirst(messages.count - maxMessages)

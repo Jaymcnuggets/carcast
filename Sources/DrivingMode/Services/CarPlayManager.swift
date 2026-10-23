@@ -1,6 +1,6 @@
 //
 //  CarPlayManager.swift
-//  CarCast
+//  DrivingMode
 //
 //  Central coordinator for CarPlay & AirPlay receiver lifecycle and media pipeline.
 //
@@ -32,14 +32,17 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
     public static let shared = CarPlayManager()
 
     @Published public private(set) var state: ReceiverState = .idle
+    @Published public private(set) var stateReason: String = "Idle — tap 'This iPhone' or 'Connect' to start receiver"
     @Published public private(set) var connectedClientName: String? = nil
     @Published public private(set) var currentStreamResolution: CGSize = .zero
     @Published public private(set) var isStreamingActive: Bool = false
+    @Published public private(set) var isSimulating: Bool = false
     @Published public var lastSampleBuffer: CMSampleBuffer? = nil
     public var hasSampleBuffer: Bool { lastSampleBuffer != nil }
     public var onSampleBuffer: ((CMSampleBuffer) -> Void)? = nil
     @Published public private(set) var totalFramesReceived: Int = 0
     @Published public private(set) var lastFrameTime: Date? = nil
+    private var internalFrameCount: Int = 0
 
     private let rtspServer: RTSPServer
     private let screenReceiver: AirPlayScreenReceiver
@@ -62,11 +65,72 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
         CarPlayBluetoothAdvertiser.shared.onDataReceived = { [weak self] data in
             self?.iap2Engine.handleIncomingBytes(data)
         }
+        CarPlayBluetoothAdvertiser.shared.onCentralConnectionChanged = { [weak self] count, detail in
+            Task { @MainActor [weak self] in
+                guard let self = self, self.state == .waitingForPhone else { return }
+                self.transitionState(
+                    to: .waitingForPhone,
+                    reason: "\(detail) (subscribedCentrals=\(count))",
+                    source: "CarPlayBluetoothAdvertiser"
+                )
+            }
+        }
+        CarPlayLockdownService.shared.onStateReasonChanged = { [weak self] suggestedState, reason in
+            Task { @MainActor [weak self] in
+                guard let self = self, self.state != .idle, self.state != .streaming else { return }
+                self.transitionState(
+                    to: suggestedState,
+                    reason: reason,
+                    source: "CarPlayLockdownService(\(CarPlayLockdownService.shared.currentPhase))"
+                )
+            }
+        }
+        setupTouchTriggerWatcher()
+        DeveloperTouchService.shared.start()
+    }
+
+    public func transitionState(to newState: ReceiverState, reason: String, source: String) {
+        let oldState = self.state
+        self.state = newState
+        self.stateReason = reason
+
+        let bleAdv = CarPlayBluetoothAdvertiser.shared.isAdvertising ? 1 : 0
+        let bleCentrals = CarPlayBluetoothAdvertiser.shared.subscribedCentralCount
+        let lockdownPhase = CarPlayLockdownService.shared.currentPhase
+        let rtspPort = rtspServer.boundPort
+        let rtspConns = rtspServer.activeConnectionCount
+        let screenActive = isStreamingActive ? 1 : 0
+
+        writeAppLog("[State] \(oldState.rawValue) -> \(newState.rawValue) [\(source)] \(reason)")
+        NSLog(
+            "[DrivingMode][State] %@ -> %@ [source=%@] reason=%@ | BLE(adv=%d, centrals=%d) | Lockdown(phase=%@) | RTSP(port=%d, conns=%d) | Screen(active=%d, frames=%d)",
+            oldState.rawValue,
+            newState.rawValue,
+            source,
+            reason,
+            bleAdv,
+            bleCentrals,
+            lockdownPhase,
+            rtspPort,
+            rtspConns,
+            screenActive,
+            totalFramesReceived
+        )
+
+        ProtocolLogger.shared.log(
+            category: .system,
+            title: "State: \(newState.rawValue) [\(source)]",
+            detail: "\(reason) | BLE(adv=\(bleAdv), centrals=\(bleCentrals)) | Lockdown(\(lockdownPhase)) | RTSP(:\(rtspPort), conns=\(rtspConns))"
+        )
     }
 
     public func startReceiver() {
         if isStreamingActive { return }
-        state = .starting
+        transitionState(
+            to: .starting,
+            reason: "Starting RTSP (:7000), AirPlay Screen (:7100), BLE Advertiser, and ACCTransport Lockdown",
+            source: "CarPlayManager.startReceiver"
+        )
 
         let config = DrivingModeConfig.shared
         let carName = config.carName
@@ -75,20 +139,42 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
         do {
             try rtspServer.start()
             try screenReceiver.start()
-            bonjourAdvertiser.startAdvertising(name: carName, deviceId: deviceId)
-            CarPlayBluetoothAdvertiser.shared.startAdvertising(carName: carName)
-            state = .waitingForPhone
 
-            // Send authentic CarPlay connection probe to trigger iOS carplayd
-            CarPlayControlClient.shared.triggerCarPlayConnect(deviceId: deviceId)
+            // Start Bluetooth CarPlay advertisement so iOS Settings > General > CarPlay discovers the vehicle
+            CarPlayBluetoothAdvertiser.shared.startAdvertising(carName: carName)
+
+            let boundRtspPort: UInt16 = rtspServer.boundPort != 0 ? rtspServer.boundPort : 7000
+            let currentIP = WiFiNetworkService.shared.currentIPAddress ?? "192.168.86.46"
+            let currentSSID = config.wifiSSID.isEmpty ? "HiFi" : config.wifiSSID
+            NSLog("[DrivingMode][Network] Selected CarPlay IP=%@ (interfaces: %@)", currentIP, WiFiNetworkService.shared.ipv4InterfaceSummary)
+
+            // Launch CoreAccessories iAP2 lockdown ignition sequence
+            CarPlayLockdownService.shared.startSession(
+                rtspPort: boundRtspPort,
+                ip: currentIP,
+                ssid: currentSSID,
+                passphrase: config.wifiPassphrase,
+                carName: carName,
+                deviceId: deviceId
+            )
+
+            transitionState(
+                to: .waitingForPhone,
+                reason: "BLE advertising is active (external phones only, centrals=0); waiting for local accessoryd iAP2 handshake & RTSP connection on \(currentIP):\(boundRtspPort)",
+                source: "CarPlayManager.startReceiver"
+            )
 
             ProtocolLogger.shared.log(
                 category: .system,
                 title: "CarPlay Receiver Started",
-                detail: "Name: \(carName) (ID: \(deviceId)) | RTSP :7000 | Screen :7100"
+                detail: "Name: \(carName) (ID: \(deviceId)) | RTSP :\(boundRtspPort) | Screen :7100"
             )
         } catch {
-            state = .error
+            transitionState(
+                to: .error,
+                reason: "Failed to start RTSP/Screen listeners: \(error.localizedDescription)",
+                source: "CarPlayManager.startReceiver"
+            )
             ProtocolLogger.shared.log(
                 category: .system,
                 title: "Failed to Start Receiver",
@@ -105,7 +191,11 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
         self.lastFrameTime = Date()
         if !self.isStreamingActive {
             self.isStreamingActive = true
-            self.state = .streaming
+            self.transitionState(
+                to: .streaming,
+                reason: "Receiving H.264 sample buffers from loopback stream",
+                source: "CarPlayManager.enqueueLoopbackSampleBuffer"
+            )
             if self.connectedClientName == nil {
                 self.connectedClientName = "This iPhone"
             }
@@ -115,12 +205,17 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
     }
 
     public func startLocalSimulation() {
+        isSimulating = true
         if state == .idle || state == .error {
             startReceiver()
         }
 
         isStreamingActive = true
-        state = .streaming
+        transitionState(
+            to: .streaming,
+            reason: "Local CarPlay simulation active on loopback head unit",
+            source: "CarPlayManager.startLocalSimulation"
+        )
         connectedClientName = "This iPhone"
         currentStreamResolution = CGSize(width: 1280, height: 494)
 
@@ -135,6 +230,7 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
         simulationTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self = self, self.isStreamingActive else { return }
+                self.totalFramesReceived += 6 // simulate 60fps frame increments
                 let t = Date().timeIntervalSince1970
                 let speed = 45.0 + 20.0 * sin(t * 0.3)
                 let rpm = 2200.0 + 1200.0 * sin(t * 0.8)
@@ -151,16 +247,19 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
     }
 
     public func stopReceiver() {
+        isSimulating = false
         simulationTimer?.invalidate()
         simulationTimer = nil
-        CarPlayControlClient.shared.cancel()
-        bonjourAdvertiser.stopAdvertising()
+        CarPlayLockdownService.shared.stopSession()
         CarPlayBluetoothAdvertiser.shared.stopAdvertising()
         screenReceiver.stop()
         rtspServer.stop()
-        iap2Engine.reset()
 
-        state = .idle
+        transitionState(
+            to: .idle,
+            reason: "Receiver stopped by user",
+            source: "CarPlayManager.stopReceiver"
+        )
         connectedClientName = nil
         isStreamingActive = false
         currentStreamResolution = .zero
@@ -172,12 +271,17 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
     public func returnToCarPlay() {
         // Triggers UI shift back to full screen CarPlay
         if isStreamingActive {
-            state = .streaming
+            transitionState(
+                to: .streaming,
+                reason: "Returned to active CarPlay video stream",
+                source: "CarPlayManager.returnToCarPlay"
+            )
         }
     }
 
     public func sendTouchEvent(action: Int, x: Double, y: Double) {
-        // Forward normalized touch to iPhone
+        // Forward normalized touch to iPhone with primary input device uuid "0"
+        rtspServer.sendTouchHIDReport(action: action, x: x, y: y, uuid: "0")
         ProtocolLogger.shared.log(
             category: .screen,
             direction: .tx,
@@ -186,22 +290,68 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
         )
     }
 
+    private var touchTriggerTimer: DispatchSourceTimer?
+
+    public func simulateTap(x: Double, y: Double) {
+        writeAppLog("[TouchWatcher] Executing tap at x=\(x), y=\(y)")
+        sendTouchEvent(action: 1, x: x, y: y)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.10) { [weak self] in
+            self?.sendTouchEvent(action: 0, x: x, y: y)
+        }
+    }
+
+    private func setupTouchTriggerWatcher() {
+        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
+        timer.schedule(deadline: .now() + 0.2, repeating: 0.2)
+        timer.setEventHandler { [weak self] in
+            guard let self = self else { return }
+            if let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                let fileURL = docs.appendingPathComponent("touch_trigger.json")
+                if let data = try? Data(contentsOf: fileURL),
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    try? FileManager.default.removeItem(at: fileURL)
+                    if let home = json["home"] as? Bool, home {
+                        writeAppLog("[TouchWatcher] Triggering HOME button")
+                        self.sendHomeButtonPress()
+                    } else if let x = json["x"] as? Double, let y = json["y"] as? Double {
+                        writeAppLog("[TouchWatcher] Triggering tap at x=\(x), y=\(y)")
+                        self.simulateTap(x: x, y: y)
+                    }
+                }
+            }
+        }
+        timer.resume()
+        self.touchTriggerTimer = timer
+    }
+
     public func sendHomeButtonPress() {
+        writeAppLog("[HID] Sending Knob & Buttons Home press")
+        rtspServer.sendHomeButtonHIDReport()
         ProtocolLogger.shared.log(
-            category: .iap2,
+            category: .screen,
             direction: .tx,
             title: "Home Button Pressed",
-            detail: "Sending Home to CarPlay"
+            detail: "Sending Home HID report to CarPlay"
         )
+    }
+
+    public func requestKeyFrame() {
+        rtspServer.requestKeyFrame()
     }
 }
 
 extension CarPlayManager: AirPlayScreenReceiverDelegate {
     nonisolated public func screenReceiverDidReceiveSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
+        // Deliver every frame straight to the display layer(s); only publish SwiftUI state for the first frame and
+        // about once per second so the whole view tree doesn't re-render at 60 fps.
+        VideoFrameBus.shared.publish(sampleBuffer)
         Task { @MainActor in
-            self.lastSampleBuffer = sampleBuffer
-            self.totalFramesReceived += 1
-            self.lastFrameTime = Date()
+            self.internalFrameCount += 1
+            if self.lastSampleBuffer == nil || self.internalFrameCount % 60 == 0 {
+                self.totalFramesReceived = self.internalFrameCount
+                self.lastSampleBuffer = sampleBuffer
+                self.lastFrameTime = Date()
+            }
             self.onSampleBuffer?(sampleBuffer)
         }
     }
@@ -214,16 +364,35 @@ extension CarPlayManager: AirPlayScreenReceiverDelegate {
 
     nonisolated public func screenReceiverStateChanged(isActive: Bool) {
         Task { @MainActor in
+            guard !self.isSimulating else { return }
             guard self.state != .idle else {
                 self.isStreamingActive = false
                 return
             }
             self.isStreamingActive = isActive
             if isActive {
-                self.state = .streaming
+                self.transitionState(
+                    to: .streaming,
+                    reason: "AirPlay H.264 screen stream connected on TCP :7100",
+                    source: "AirPlayScreenReceiver.screenReceiverStateChanged(true)"
+                )
+                self.rtspServer.requestKeyFrame()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    self?.rtspServer.requestKeyFrame()
+                }
             } else if self.state == .streaming {
-                self.state = .waitingForPhone
+                self.transitionState(
+                    to: .waitingForPhone,
+                    reason: "AirPlay H.264 screen stream on TCP :7100 disconnected; waiting for phone to reconnect",
+                    source: "AirPlayScreenReceiver.screenReceiverStateChanged(false)"
+                )
             }
+        }
+    }
+
+    nonisolated public func screenReceiverNeedsKeyFrame() {
+        Task { @MainActor in
+            self.rtspServer.requestKeyFrame()
         }
     }
 }
@@ -232,7 +401,11 @@ extension CarPlayManager: RTSPServerDelegate {
     nonisolated public func rtspServerDidStartSession(clientName: String?) {
         Task { @MainActor in
             self.connectedClientName = clientName ?? "iPhone"
-            self.state = .connecting
+            self.transitionState(
+                to: .connecting,
+                reason: "RTSP ANNOUNCE received from \(clientName ?? "iPhone"); negotiating video stream setup",
+                source: "RTSPServer.rtspServerDidStartSession"
+            )
         }
     }
 
@@ -241,7 +414,11 @@ extension CarPlayManager: RTSPServerDelegate {
             guard self.state != .idle else { return }
             self.connectedClientName = nil
             self.isStreamingActive = false
-            self.state = .waitingForPhone
+            self.transitionState(
+                to: .waitingForPhone,
+                reason: "RTSP TEARDOWN received; CarPlay session ended, waiting for iPhone",
+                source: "RTSPServer.rtspServerDidEndSession"
+            )
         }
     }
 
@@ -251,19 +428,31 @@ extension CarPlayManager: RTSPServerDelegate {
 extension CarPlayManager: iAP2ProtocolDelegate {
     nonisolated public func iap2DidReceiveIdentificationAccepted() {
         Task { @MainActor in
-            self.state = .streaming
+            self.transitionState(
+                to: .streaming,
+                reason: "iAP2 IdentificationAccepted received over BLE",
+                source: "iAP2ProtocolEngine.iap2DidReceiveIdentificationAccepted"
+            )
         }
     }
 
     nonisolated public func iap2DidReceiveIdentificationRejected() {
         Task { @MainActor in
-            self.state = .error
+            self.transitionState(
+                to: .error,
+                reason: "iAP2 IdentificationRejected received over BLE",
+                source: "iAP2ProtocolEngine.iap2DidReceiveIdentificationRejected"
+            )
         }
     }
 
     nonisolated public func iap2DidReceiveRequestStartCarPlay() {
         Task { @MainActor in
-            self.state = .connecting
+            self.transitionState(
+                to: .connecting,
+                reason: "iAP2 RequestStartCarPlay received over BLE",
+                source: "iAP2ProtocolEngine.iap2DidReceiveRequestStartCarPlay"
+            )
         }
     }
 
@@ -294,7 +483,11 @@ extension CarPlayManager: iAP2ProtocolDelegate {
     nonisolated public func iap2DidRequestUI(mode: String?) {
         Task { @MainActor in
             // Return to native car UI
-            self.state = .waitingForPhone
+            self.transitionState(
+                to: .waitingForPhone,
+                reason: "iAP2 RequestUI(mode=\(mode ?? "nil")) requested return to native car UI",
+                source: "iAP2ProtocolEngine.iap2DidRequestUI"
+            )
         }
     }
 
@@ -302,7 +495,154 @@ extension CarPlayManager: iAP2ProtocolDelegate {
         Task { @MainActor in
             guard self.state != .idle else { return }
             self.isStreamingActive = false
-            self.state = .waitingForPhone
+            self.transitionState(
+                to: .waitingForPhone,
+                reason: "iAP2 session ended; waiting for iPhone to reconnect",
+                source: "iAP2ProtocolEngine.iap2SessionEnded"
+            )
+        }
+    }
+}
+
+
+/// Thread-safe fan-out of decoded CarPlay video sample buffers to on-screen AVSampleBufferDisplayLayers.
+public final class VideoFrameBus: @unchecked Sendable {
+    public static let shared = VideoFrameBus()
+    private let lock = NSLock()
+    private var observers: [ObjectIdentifier: (CMSampleBuffer) -> Void] = [:]
+    private var lastBuffer: CMSampleBuffer?
+
+    public func add(_ owner: AnyObject, handler: @escaping (CMSampleBuffer) -> Void) {
+        lock.lock()
+        observers[ObjectIdentifier(owner)] = handler
+        let cached = lastBuffer
+        lock.unlock()
+        if let buf = cached {
+            handler(buf)
+        }
+        Task { @MainActor in
+            CarPlayManager.shared.requestKeyFrame()
+        }
+    }
+
+    public func remove(_ owner: AnyObject) {
+        lock.lock(); observers[ObjectIdentifier(owner)] = nil; lock.unlock()
+    }
+
+    public func publish(_ sampleBuffer: CMSampleBuffer) {
+        lock.lock()
+        lastBuffer = sampleBuffer
+        let handlers = Array(observers.values)
+        lock.unlock()
+        handlers.forEach { $0(sampleBuffer) }
+    }
+}
+
+// MARK: - Developer Touch Service
+import Network
+
+public final class DeveloperTouchService: @unchecked Sendable {
+    public static let shared = DeveloperTouchService()
+
+    private var listener: NWListener?
+    private let queue = DispatchQueue(label: "dev.unordinarylabs.drivingmode.devtouch")
+
+    private init() {}
+
+    public func start() {
+        queue.async {
+            guard self.listener == nil else { return }
+            do {
+                let params = NWParameters.tcp
+                let listener = try NWListener(using: params, on: 8999)
+                listener.stateUpdateHandler = { state in
+                    writeAppLog("[DevTouch] Listener state: \(state)")
+                }
+                listener.newConnectionHandler = { [weak self] conn in
+                    self?.handleConnection(conn)
+                }
+                listener.start(queue: self.queue)
+                self.listener = listener
+                writeAppLog("[DevTouch] Server listening on port 8999")
+            } catch {
+                writeAppLog("[DevTouch] Failed to start listener: \(error)")
+            }
+        }
+    }
+
+    public func stop() {
+        queue.async {
+            self.listener?.cancel()
+            self.listener = nil
+        }
+    }
+
+    private func handleConnection(_ conn: NWConnection) {
+        conn.start(queue: queue)
+        conn.receive(minimumIncompleteLength: 1, maximumLength: 4096) { [weak self, weak conn] data, _, _, _ in
+            guard let conn = conn, let data = data, let req = String(data: data, encoding: .utf8) else {
+                conn?.cancel()
+                return
+            }
+
+            let firstLine = req.components(separatedBy: "\r\n").first ?? ""
+            let parts = firstLine.split(separator: " ")
+            guard parts.count >= 2 else {
+                conn.cancel()
+                return
+            }
+
+            let path = String(parts[1])
+            var responseJson = "{\"ok\": true}"
+
+            if path.starts(with: "/tap") {
+                var x = 0.5
+                var y = 0.5
+                if let urlComponents = URLComponents(string: "http://localhost" + path) {
+                    if let xStr = urlComponents.queryItems?.first(where: { $0.name == "x" })?.value, let xVal = Double(xStr) {
+                        x = xVal
+                    }
+                    if let yStr = urlComponents.queryItems?.first(where: { $0.name == "y" })?.value, let yVal = Double(yStr) {
+                        y = yVal
+                    }
+                }
+                writeAppLog("[DevTouch] Received HTTP /tap request (x=\(x), y=\(y))")
+                DispatchQueue.main.async {
+                    CarPlayManager.shared.simulateTap(x: x, y: y)
+                }
+                responseJson = "{\"ok\": true, \"action\": \"tap\", \"x\": \(x), \"y\": \(y)}"
+            } else if path.starts(with: "/home") {
+                writeAppLog("[DevTouch] Received HTTP /home request")
+                DispatchQueue.main.async {
+                    CarPlayManager.shared.sendHomeButtonPress()
+                }
+                responseJson = "{\"ok\": true, \"action\": \"home\"}"
+            } else if path.starts(with: "/keyframe") {
+                writeAppLog("[DevTouch] Received HTTP /keyframe request")
+                DispatchQueue.main.async {
+                    CarPlayManager.shared.requestKeyFrame()
+                }
+                responseJson = "{\"ok\": true, \"action\": \"keyframe\"}"
+            } else if path.starts(with: "/logs") {
+                let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+                let logUrl = docs?.appendingPathComponent("status.txt")
+                let content = (logUrl != nil ? (try? String(contentsOf: logUrl!)) : nil) ?? "No logs yet"
+                let httpResp = "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: \(content.utf8.count)\r\nConnection: close\r\n\r\n\(content)"
+                conn.send(content: httpResp.data(using: .utf8), completion: .contentProcessed { _ in
+                    conn.cancel()
+                })
+                return
+            } else if path.starts(with: "/status") {
+                let state = CarPlayManager.shared.state.rawValue
+                let frames = CarPlayManager.shared.totalFramesReceived
+                let active = CarPlayManager.shared.isStreamingActive
+                responseJson = "{\"ok\": true, \"state\": \"\(state)\", \"frames\": \(frames), \"streaming\": \(active)}"
+            }
+
+            let httpResp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: \(responseJson.utf8.count)\r\nConnection: close\r\n\r\n\(responseJson)"
+            conn.send(content: httpResp.data(using: .utf8), completion: .contentProcessed { _ in
+                conn.cancel()
+            })
         }
     }
 }

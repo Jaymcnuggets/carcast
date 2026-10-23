@@ -1,8 +1,8 @@
 //
 //  AirPlayBonjourBrowser.swift
-//  CarCast
+//  DrivingMode
 //
-//  Browses local network for available CarCast receivers and displays.
+//  Browses local network for available DrivingMode receivers and displays.
 //
 
 import Foundation
@@ -12,13 +12,13 @@ public struct DiscoveredReceiver: Identifiable, Hashable, Sendable {
     public let id: String
     public let name: String
     public let endpoint: String
-    public let isCarCastNative: Bool
+    public let isDrivingModeNative: Bool
 
-    public init(id: String, name: String, endpoint: String, isCarCastNative: Bool) {
+    public init(id: String, name: String, endpoint: String, isDrivingModeNative: Bool) {
         self.id = id
         self.name = name
         self.endpoint = endpoint
-        self.isCarCastNative = isCarCastNative
+        self.isDrivingModeNative = isDrivingModeNative
     }
 }
 
@@ -37,7 +37,7 @@ public final class AirPlayBonjourBrowser: ObservableObject {
         stopScanning()
         isScanning = true
 
-        let descriptor = NWBrowser.Descriptor.bonjour(type: "_carcast._tcp.", domain: "local.")
+        let descriptor = NWBrowser.Descriptor.bonjour(type: "_drivingmode._tcp.", domain: "local.")
         let params = NWParameters()
         params.includePeerToPeer = true
 
@@ -55,7 +55,7 @@ public final class AirPlayBonjourBrowser: ObservableObject {
                             id: id,
                             name: name,
                             endpoint: res.endpoint.debugDescription,
-                            isCarCastNative: true
+                            isDrivingModeNative: true
                         ))
                     }
                 }
@@ -66,7 +66,7 @@ public final class AirPlayBonjourBrowser: ObservableObject {
         browser.stateUpdateHandler = { state in
             if state == .ready {
                 Task { @MainActor in
-                    ProtocolLogger.shared.log(category: .bonjour, title: "Bonjour Browser Active", detail: "Scanning for _carcast._tcp")
+                    ProtocolLogger.shared.log(category: .bonjour, title: "Bonjour Browser Active", detail: "Scanning for _drivingmode._tcp")
                 }
             }
         }

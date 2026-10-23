@@ -1,6 +1,6 @@
 //
 //  CarPlayActiveScreenView.swift
-//  CarCast
+//  DrivingMode
 //
 //  Authentic Apple CarPlay live receiver display:
 //  Displays the genuine decoded H.264 video stream from iOS (carplayd)
@@ -25,18 +25,46 @@ public struct CarPlayActiveScreenView: View {
                 Color.black.ignoresSafeArea()
 
                 // Hardware-accelerated Apple CarPlay H.264 video layer
-                RawVideoCanvasView()
+                RawVideoCanvasView(onTouchPoint: { pt in
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        touchIndicatorPoint = pt
+                    }
+                })
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .ignoresSafeArea(config.avoidNotch ? [] : .all)
 
-                // Optional touch point visualizer for screen recordings
-                if config.showTouches, let pt = touchIndicatorPoint {
+                // Touch feedback indicator
+                if let pt = touchIndicatorPoint {
                     Circle()
-                        .fill(Color.white.opacity(0.65))
+                        .stroke(Color.white.opacity(0.85), lineWidth: 2)
+                        .background(Circle().fill(Color.white.opacity(0.35)))
                         .frame(width: 44, height: 44)
                         .position(pt)
                         .allowsHitTesting(false)
                 }
+
+                // Live status badge in top trailing corner
+                VStack {
+                    HStack {
+                        Spacer()
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(manager.isStreamingActive ? Color.green : Color.orange)
+                                .frame(width: 8, height: 8)
+                            Text("CarPlay \(manager.isStreamingActive ? "Live" : "Waiting") (\(manager.totalFramesReceived) frames)")
+                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.black.opacity(0.65))
+                        .cornerRadius(12)
+                        .padding(.trailing, 20)
+                        .padding(.top, 10)
+                    }
+                    Spacer()
+                }
+                .allowsHitTesting(false)
 
                 // If stream is waiting or initializing, show clean subtle status
                 if !manager.isStreamingActive {
@@ -47,6 +75,18 @@ public struct CarPlayActiveScreenView: View {
                         Text("Connecting to CarPlay…")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundColor(.white.opacity(0.8))
+                        Text("\(manager.state.rawValue) (frames: \(manager.totalFramesReceived))")
+                            .font(.system(size: 12, weight: .regular, design: .monospaced))
+                            .foregroundColor(.white.opacity(0.6))
+                        Button("Restart Session") {
+                            manager.stopReceiver()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                manager.startReceiver()
+                            }
+                        }
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Color(red: 0.2, green: 0.6, blue: 1.0))
+                        .padding(.top, 4)
                     }
                     .padding(20)
                     .background(Color.black.opacity(0.75))
@@ -57,6 +97,11 @@ public struct CarPlayActiveScreenView: View {
         #if os(iOS)
         .statusBarHidden(true)
         #endif
+        .onAppear {
+            if manager.state == .idle {
+                manager.startReceiver()
+            }
+        }
         .onChange(of: manager.isStreamingActive) { active in
             if !active {
                 dismiss()

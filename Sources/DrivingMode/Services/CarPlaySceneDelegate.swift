@@ -1,6 +1,6 @@
 //
 //  CarPlaySceneDelegate.swift
-//  CarCast
+//  DrivingMode
 //
 //  Native Apple CarPlay framework integration, conforming to:
 //  - CPTemplateApplicationSceneDelegate (Main Head Unit)

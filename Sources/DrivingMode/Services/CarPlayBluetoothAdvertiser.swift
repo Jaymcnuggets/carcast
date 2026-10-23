@@ -1,6 +1,6 @@
 //
 //  CarPlayBluetoothAdvertiser.swift
-//  CarCast
+//  DrivingMode
 //
 //  Authentic Wireless CarPlay CoreBluetooth Peripheral Advertiser:
 //  Publishes Apple Wireless CarPlay GATT Service UUID:
@@ -20,12 +20,14 @@ public final class CarPlayBluetoothAdvertiser: NSObject, CBPeripheralManagerDele
 
     private var peripheralManager: CBPeripheralManager?
     private var pendingCarName: String?
-    private var isAdvertising = false
+    public private(set) var isAdvertising = false
     private var servicesAdded = false
     private var iapCharacteristic: CBMutableCharacteristic?
     private var pendingOutgoingData: [Data] = []
     private var subscribedCentrals: [CBCentral] = []
+    public var subscribedCentralCount: Int { subscribedCentrals.count }
     public var onDataReceived: ((Data) -> Void)?
+    public var onCentralConnectionChanged: ((Int, String) -> Void)?
     private let queue = DispatchQueue(label: "dev.unordinarylabs.drivingmode.bluetooth", qos: .utility)
 
     public override init() {
@@ -95,11 +97,13 @@ public final class CarPlayBluetoothAdvertiser: NSObject, CBPeripheralManagerDele
         pm.startAdvertising(advertisementData)
         self.isAdvertising = true
 
+        NSLog("[DrivingMode][BLE] Bluetooth CarPlay Advertiser Active: Broadcasting '%@' on UUID %@ (subscribedCentrals=%d; NOTE: BLE GATT only discovers external iPhones — same-device 'This iPhone' uses ACCTransport/RTSP loopback)", name, Self.carPlayServiceUUID.uuidString, self.subscribedCentrals.count)
+
         Task { @MainActor in
             ProtocolLogger.shared.log(
                 category: .system,
                 title: "Bluetooth CarPlay Advertiser Active",
-                detail: "Broadcasting \(name) on UUID \(Self.carPlayServiceUUID.uuidString)"
+                detail: "Broadcasting \(name) on UUID \(Self.carPlayServiceUUID.uuidString) (centrals=\(self.subscribedCentrals.count); external discovery only, loopback uses ACCTransport)"
             )
         }
     }
@@ -151,6 +155,10 @@ public final class CarPlayBluetoothAdvertiser: NSObject, CBPeripheralManagerDele
             if !self.subscribedCentrals.contains(where: { $0.identifier == central.identifier }) {
                 self.subscribedCentrals.append(central)
             }
+            let count = self.subscribedCentrals.count
+            let centralId = central.identifier.uuidString
+            NSLog("[DrivingMode][BLE] Central subscribed to CarPlay GATT characteristic (%@), subscribedCentrals=%d", centralId, count)
+            self.onCentralConnectionChanged?(count, "BLE central \(centralId) subscribed")
             if let char = self.iapCharacteristic {
                 while !self.pendingOutgoingData.isEmpty {
                     let next = self.pendingOutgoingData.removeFirst()
@@ -163,6 +171,10 @@ public final class CarPlayBluetoothAdvertiser: NSObject, CBPeripheralManagerDele
     public func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
         queue.async {
             self.subscribedCentrals.removeAll(where: { $0.identifier == central.identifier })
+            let count = self.subscribedCentrals.count
+            let centralId = central.identifier.uuidString
+            NSLog("[DrivingMode][BLE] Central unsubscribed from CarPlay GATT characteristic (%@), subscribedCentrals=%d", centralId, count)
+            self.onCentralConnectionChanged?(count, "BLE central \(centralId) unsubscribed")
         }
     }
 

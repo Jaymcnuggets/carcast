@@ -539,4 +539,23 @@ final class DrivingModeTests: XCTestCase {
         XCTAssertEqual(config.audioRoutingMode, .airPlayInBand)
         XCTAssertFalse(AirPlayAudioReceiver.shared.isPassthroughMode)
     }
+
+    #if canImport(UIKit) && canImport(AVFoundation) && os(iOS)
+    func testCameraVideoOrientationMapping() {
+        // UIInterfaceOrientation landscapeRight (USB right, island left) maps 1:1 to AVCaptureVideoOrientation.landscapeRight
+        XCTAssertEqual(AVCaptureVideoOrientation(interfaceOrientation: .landscapeRight), .landscapeRight)
+        // UIInterfaceOrientation landscapeLeft (USB left, island right) maps 1:1 to AVCaptureVideoOrientation.landscapeLeft
+        XCTAssertEqual(AVCaptureVideoOrientation(interfaceOrientation: .landscapeLeft), .landscapeLeft)
+        // Portrait and upsideDown match 1:1
+        XCTAssertEqual(AVCaptureVideoOrientation(interfaceOrientation: .portrait), .portrait)
+        XCTAssertEqual(AVCaptureVideoOrientation(interfaceOrientation: .portraitUpsideDown), .portraitUpsideDown)
+
+        // UIDeviceOrientation mapping: landscapeLeft has USB on right -> AVCaptureVideoOrientation.landscapeRight
+        XCTAssertEqual(AVCaptureVideoOrientation(deviceOrientation: .landscapeLeft), .landscapeRight)
+        // UIDeviceOrientation landscapeRight has USB on left -> AVCaptureVideoOrientation.landscapeLeft
+        XCTAssertEqual(AVCaptureVideoOrientation(deviceOrientation: .landscapeRight), .landscapeLeft)
+        XCTAssertEqual(AVCaptureVideoOrientation(deviceOrientation: .portrait), .portrait)
+        XCTAssertEqual(AVCaptureVideoOrientation(deviceOrientation: .portraitUpsideDown), .portraitUpsideDown)
+    }
+    #endif
 }

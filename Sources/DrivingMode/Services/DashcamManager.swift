@@ -9,6 +9,67 @@
 import Foundation
 import AVFoundation
 import SwiftUI
+#if canImport(UIKit) && os(iOS)
+import UIKit
+
+public extension AVCaptureVideoOrientation {
+    /// Maps a UIInterfaceOrientation to the corresponding AVCaptureVideoOrientation.
+    /// In iOS:
+    /// - UIInterfaceOrientation.landscapeRight (USB port / Home button on right) -> AVCaptureVideoOrientation.landscapeRight
+    /// - UIInterfaceOrientation.landscapeLeft (USB port / Home button on left) -> AVCaptureVideoOrientation.landscapeLeft
+    /// - UIInterfaceOrientation.portrait -> AVCaptureVideoOrientation.portrait
+    /// - UIInterfaceOrientation.portraitUpsideDown -> AVCaptureVideoOrientation.portraitUpsideDown
+    init(interfaceOrientation: UIInterfaceOrientation) {
+        switch interfaceOrientation {
+        case .landscapeRight:
+            self = .landscapeRight
+        case .landscapeLeft:
+            self = .landscapeLeft
+        case .portraitUpsideDown:
+            self = .portraitUpsideDown
+        case .portrait:
+            self = .portrait
+        @unknown default:
+            self = .landscapeRight
+        }
+    }
+
+    /// Maps a UIDeviceOrientation to the corresponding AVCaptureVideoOrientation.
+    /// Note: UIDeviceOrientation landscape constants are inverted relative to UI and video orientation:
+    /// - UIDeviceOrientation.landscapeLeft has USB port / Home button on right -> AVCaptureVideoOrientation.landscapeRight
+    /// - UIDeviceOrientation.landscapeRight has USB port / Home button on left -> AVCaptureVideoOrientation.landscapeLeft
+    init(deviceOrientation: UIDeviceOrientation) {
+        switch deviceOrientation {
+        case .landscapeLeft:
+            self = .landscapeRight
+        case .landscapeRight:
+            self = .landscapeLeft
+        case .portraitUpsideDown:
+            self = .portraitUpsideDown
+        case .portrait:
+            self = .portrait
+        default:
+            self = .landscapeRight
+        }
+    }
+
+    /// Returns the active capture orientation for a given windowScene or the frontmost active scene.
+    static func current(for windowScene: UIWindowScene? = nil) -> AVCaptureVideoOrientation {
+        let activeScene = windowScene
+            ?? UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first { $0.activationState == .foregroundActive }
+            ?? UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first
+
+        if let scene = activeScene {
+            return AVCaptureVideoOrientation(interfaceOrientation: scene.interfaceOrientation)
+        }
+        return AVCaptureVideoOrientation(deviceOrientation: UIDevice.current.orientation)
+    }
+}
+#endif
 
 public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendable {
     public static let shared = DashcamManager()
@@ -38,6 +99,31 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
         impactService.onImpact = { [weak self] gForce in
             self?.saveCurrentEvent(reason: String(format: "Crash impact detected (%.1fG)", gForce))
         }
+
+        #if os(iOS)
+        NotificationCenter.default.addObserver(
+            forName: UIDevice.orientationDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.updateMovieOrientation()
+        }
+        #endif
+    }
+
+    public func updateMovieOrientation() {
+        #if os(iOS)
+        queue.async { [weak self] in
+            guard let self = self, let output = self.movieOutput else { return }
+            if let conn = output.connection(with: .video), conn.isVideoOrientationSupported {
+                let target = AVCaptureVideoOrientation.current()
+                if conn.videoOrientation != target {
+                    conn.videoOrientation = target
+                    NSLog("[Dashcam] Updated movieOutput videoOrientation to: %ld", target.rawValue)
+                }
+            }
+        }
+        #endif
     }
 
     public func startRecording(withAudio: Bool = false) {
@@ -101,7 +187,7 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
             if session.canAddOutput(output) {
                 session.addOutput(output)
                 if let conn = output.connection(with: .video), conn.isVideoOrientationSupported {
-                    conn.videoOrientation = .landscapeRight
+                    conn.videoOrientation = AVCaptureVideoOrientation.current()
                 }
             }
 

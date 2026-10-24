@@ -283,20 +283,54 @@ public final class CameraPreviewUIView: UIView {
         return layer as! AVCaptureVideoPreviewLayer
     }
 
+    private var orientationObserver: NSObjectProtocol?
+
     public override init(frame: CGRect) {
         super.init(frame: frame)
-        backgroundColor = .black
-        previewLayer.videoGravity = .resizeAspectFill
+        setupView()
     }
 
     public required init?(coder: NSCoder) {
         super.init(coder: coder)
+        setupView()
+    }
+
+    private func setupView() {
         backgroundColor = .black
         previewLayer.videoGravity = .resizeAspectFill
+
+        orientationObserver = NotificationCenter.default.addObserver(
+            forName: UIDevice.orientationDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.updateOrientation()
+        }
+    }
+
+    deinit {
+        if let observer = orientationObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
+    public override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window != nil {
+            updateOrientation()
+        }
+    }
+
+    public override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        updateOrientation()
     }
 
     public func attachSession(_ session: AVCaptureSession?) {
-        guard previewLayer.session !== session else { return }
+        guard previewLayer.session !== session else {
+            updateOrientation()
+            return
+        }
         previewLayer.session = session
         updateOrientation()
     }
@@ -308,21 +342,10 @@ public final class CameraPreviewUIView: UIView {
 
     public func updateOrientation() {
         guard let connection = previewLayer.connection, connection.isVideoOrientationSupported else { return }
-        if let windowScene = window?.windowScene {
-            switch windowScene.interfaceOrientation {
-            case .landscapeLeft:
-                connection.videoOrientation = .landscapeLeft
-            case .landscapeRight:
-                connection.videoOrientation = .landscapeRight
-            case .portraitUpsideDown:
-                connection.videoOrientation = .portraitUpsideDown
-            case .portrait:
-                connection.videoOrientation = .portrait
-            @unknown default:
-                connection.videoOrientation = .landscapeRight
-            }
-        } else {
-            connection.videoOrientation = .landscapeRight
+        let targetOrientation = AVCaptureVideoOrientation.current(for: window?.windowScene)
+        if connection.videoOrientation != targetOrientation {
+            connection.videoOrientation = targetOrientation
+            NSLog("[Dashcam] CameraPreviewUIView updated videoOrientation to: %ld (bounds: %@)", targetOrientation.rawValue, NSCoder.string(for: bounds))
         }
     }
 }

@@ -17,6 +17,7 @@ public struct DashboardHomeView: View {
     @State private var showingActiveCarPlay: Bool = false
     @State private var showingPasswordAlert: Bool = false
     @State private var enteredPassword: String = ""
+    @State private var hasPerformedInitialAutoStart: Bool = false
 
     public init() {}
 
@@ -205,9 +206,9 @@ public struct DashboardHomeView: View {
             }
 
             .onAppear {
-                if manager.isStreamingActive {
-                    showingActiveCarPlay = true
-                }
+                guard !hasPerformedInitialAutoStart else { return }
+                hasPerformedInitialAutoStart = true
+
                 #if targetEnvironment(simulator)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     manager.startLocalSimulation()

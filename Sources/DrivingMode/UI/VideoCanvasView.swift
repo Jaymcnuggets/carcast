@@ -32,6 +32,7 @@ import UIKit
 
 public struct RawVideoCanvasView: UIViewRepresentable {
     @ObservedObject var manager = CarPlayManager.shared
+    @ObservedObject var config = DrivingModeConfig.shared
     public var onTouchPoint: ((CGPoint?) -> Void)? = nil
 
     public init(onTouchPoint: ((CGPoint?) -> Void)? = nil) {
@@ -53,6 +54,7 @@ public struct RawVideoCanvasView: UIViewRepresentable {
         if !manager.isStreamingActive {
             uiView.flush()
         }
+        uiView.updateVideoGravity()
     }
 }
 
@@ -216,7 +218,7 @@ public final class SampleBufferContainerView: UIView {
         updateVideoGravity()
 
         #if targetEnvironment(simulator)
-        simulatorPreviewView.contentMode = .scaleToFill
+        simulatorPreviewView.contentMode = DrivingModeConfig.shared.fillScreenEdgeToEdge ? .scaleToFill : .scaleAspectFit
         simulatorPreviewView.clipsToBounds = true
         simulatorPreviewView.isUserInteractionEnabled = false
         addSubview(simulatorPreviewView)
@@ -295,33 +297,18 @@ public final class SampleBufferContainerView: UIView {
         #endif
     }
 
-    private func updateVideoGravity() {
-        if DrivingModeConfig.shared.fillScreenEdgeToEdge {
+    public func updateVideoGravity() {
+        let isFill = DrivingModeConfig.shared.fillScreenEdgeToEdge
+        if isFill {
             sampleLayer.videoGravity = .resize
-            return
-        }
-        guard bounds.width > 0, bounds.height > 0 else {
-            sampleLayer.videoGravity = .resizeAspect
-            return
-        }
-        let streamW: Double
-        let streamH: Double
-        if CarPlayManager.shared.currentStreamResolution.width > 0 && CarPlayManager.shared.currentStreamResolution.height > 0 {
-            streamW = Double(CarPlayManager.shared.currentStreamResolution.width)
-            streamH = Double(CarPlayManager.shared.currentStreamResolution.height)
+            #if targetEnvironment(simulator)
+            simulatorPreviewView.contentMode = .scaleToFill
+            #endif
         } else {
-            streamW = 1920.0
-            streamH = 1028.0
-        }
-        let streamAspect = streamW / streamH
-        let viewAspect = Double(bounds.width / bounds.height)
-
-        // When view is wider than stream (iPhone landscape), resizeAspect fills 100% of height.
-        // When view is narrower/taller than stream (iPad), resizeAspectFill ensures height is 100% filled without vertical letterboxing.
-        if viewAspect >= streamAspect {
             sampleLayer.videoGravity = .resizeAspect
-        } else {
-            sampleLayer.videoGravity = .resizeAspectFill
+            #if targetEnvironment(simulator)
+            simulatorPreviewView.contentMode = .scaleAspectFit
+            #endif
         }
     }
 
@@ -384,11 +371,6 @@ public final class SampleBufferContainerView: UIView {
         let viewH = bounds.height
         guard viewW > 0, viewH > 0 else { return (0, 0) }
 
-        #if targetEnvironment(simulator)
-        let normX = min(max(Double(loc.x / viewW), 0.0), 1.0)
-        let normY = min(max(Double(loc.y / viewH), 0.0), 1.0)
-        return (normX, normY)
-        #else
         if DrivingModeConfig.shared.fillScreenEdgeToEdge {
             let normX = min(max(Double(loc.x / viewW), 0.0), 1.0)
             let normY = min(max(Double(loc.y / viewH), 0.0), 1.0)
@@ -397,6 +379,15 @@ public final class SampleBufferContainerView: UIView {
 
         let streamW: Double
         let streamH: Double
+        #if targetEnvironment(simulator)
+        if let imgSize = simulatorPreviewView.image?.size, imgSize.width > 0, imgSize.height > 0 {
+            streamW = Double(imgSize.width)
+            streamH = Double(imgSize.height)
+        } else {
+            streamW = 1344.0
+            streamH = 720.0
+        }
+        #else
         if CarPlayManager.shared.currentStreamResolution.width > 0 && CarPlayManager.shared.currentStreamResolution.height > 0 {
             streamW = Double(CarPlayManager.shared.currentStreamResolution.width)
             streamH = Double(CarPlayManager.shared.currentStreamResolution.height)
@@ -404,6 +395,7 @@ public final class SampleBufferContainerView: UIView {
             streamW = 1920.0
             streamH = 1028.0
         }
+        #endif
 
         let streamAspect = streamW / streamH
         let viewAspect = Double(viewW / viewH)
@@ -411,16 +403,25 @@ public final class SampleBufferContainerView: UIView {
         var renderW = viewW
         var renderH = viewH
         var offsetX: CGFloat = 0
+        var offsetY: CGFloat = 0
 
-        // Height is always 100% filled to screen height (renderH = viewH, offsetY = 0)
-        renderH = viewH
-        renderW = CGFloat(Double(viewH) * streamAspect)
-        offsetX = (viewW - renderW) / 2.0
+        if viewAspect >= streamAspect {
+            // View is wider than stream -> pillarboxed (bars on left/right)
+            renderH = viewH
+            renderW = CGFloat(Double(viewH) * streamAspect)
+            offsetX = (viewW - renderW) / 2.0
+            offsetY = 0
+        } else {
+            // View is narrower/taller than stream -> letterboxed (bars on top/bottom)
+            renderW = viewW
+            renderH = CGFloat(Double(viewW) / streamAspect)
+            offsetX = 0
+            offsetY = (viewH - renderH) / 2.0
+        }
 
         let normX = min(max(Double((loc.x - offsetX) / max(renderW, 1.0)), 0.0), 1.0)
-        let normY = min(max(Double(loc.y / max(viewH, 1.0)), 0.0), 1.0)
+        let normY = min(max(Double((loc.y - offsetY) / max(renderH, 1.0)), 0.0), 1.0)
         return (normX, normY)
-        #endif
     }
 
     private var enqueuedCount = 0

@@ -284,6 +284,8 @@ public final class CameraPreviewUIView: UIView {
     }
 
     private var orientationObserver: NSObjectProtocol?
+    private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
+    private var rotationObservation: NSKeyValueObservation?
 
     public override init(frame: CGRect) {
         super.init(frame: frame)
@@ -312,17 +314,21 @@ public final class CameraPreviewUIView: UIView {
         if let observer = orientationObserver {
             NotificationCenter.default.removeObserver(observer)
         }
+        rotationObservation?.invalidate()
+        rotationObservation = nil
     }
 
     public override func didMoveToWindow() {
         super.didMoveToWindow()
         if window != nil {
+            setupRotationCoordinator()
             updateOrientation()
         }
     }
 
     public override func didMoveToSuperview() {
         super.didMoveToSuperview()
+        setupRotationCoordinator()
         updateOrientation()
     }
 
@@ -332,7 +338,27 @@ public final class CameraPreviewUIView: UIView {
             return
         }
         previewLayer.session = session
+        setupRotationCoordinator()
         updateOrientation()
+    }
+
+    private func setupRotationCoordinator() {
+        guard let session = previewLayer.session,
+              let device = session.inputs.compactMap({ ($0 as? AVCaptureDeviceInput)?.device }).first else {
+            return
+        }
+
+        if rotationCoordinator?.device !== device {
+            rotationObservation?.invalidate()
+            let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: previewLayer)
+            self.rotationCoordinator = coordinator
+
+            rotationObservation = coordinator.observe(\.videoRotationAngleForHorizonLevelPreview, options: [.new]) { [weak self] coord, _ in
+                DispatchQueue.main.async {
+                    self?.updateOrientation()
+                }
+            }
+        }
     }
 
     public override func layoutSubviews() {
@@ -341,11 +367,27 @@ public final class CameraPreviewUIView: UIView {
     }
 
     public func updateOrientation() {
-        guard let connection = previewLayer.connection, connection.isVideoOrientationSupported else { return }
-        let targetOrientation = AVCaptureVideoOrientation.current(for: window?.windowScene)
-        if connection.videoOrientation != targetOrientation {
-            connection.videoOrientation = targetOrientation
-            NSLog("[Dashcam] CameraPreviewUIView updated videoOrientation to: %ld (bounds: %@)", targetOrientation.rawValue, NSCoder.string(for: bounds))
+        guard let connection = previewLayer.connection else { return }
+
+        // Use modern iOS 17+ RotationCoordinator (essential for iPhone Duo dual-screen & fold posture)
+        if let coordinator = rotationCoordinator {
+            let angle = coordinator.videoRotationAngleForHorizonLevelPreview
+            if connection.isVideoRotationAngleSupported(angle) {
+                if connection.videoRotationAngle != angle {
+                    connection.videoRotationAngle = angle
+                    NSLog("[Dashcam] CameraPreviewUIView updated videoRotationAngle to: %.1f", angle)
+                }
+                return
+            }
+        }
+
+        // Fallback to AVCaptureVideoOrientation
+        if connection.isVideoOrientationSupported {
+            let targetOrientation = AVCaptureVideoOrientation.current(for: window?.windowScene)
+            if connection.videoOrientation != targetOrientation {
+                connection.videoOrientation = targetOrientation
+                NSLog("[Dashcam] CameraPreviewUIView updated videoOrientation to: %ld (bounds: %@)", targetOrientation.rawValue, NSCoder.string(for: bounds))
+            }
         }
     }
 }

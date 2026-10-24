@@ -89,6 +89,10 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
     private var currentOutputURL: URL?
     private var previousOutputURL: URL?
     private let queue = DispatchQueue(label: "dev.unordinarylabs.dashcam.queue")
+    #if os(iOS)
+    private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
+    private var rotationObservation: NSKeyValueObservation?
+    #endif
 
     public init(storageManager: DashcamStorageManager = DashcamStorageManager(),
                 impactService: ImpactDetectionService = ImpactDetectionService()) {
@@ -115,11 +119,25 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
         #if os(iOS)
         queue.async { [weak self] in
             guard let self = self, let output = self.movieOutput else { return }
-            if let conn = output.connection(with: .video), conn.isVideoOrientationSupported {
-                let target = AVCaptureVideoOrientation.current()
-                if conn.videoOrientation != target {
-                    conn.videoOrientation = target
-                    NSLog("[Dashcam] Updated movieOutput videoOrientation to: %ld", target.rawValue)
+            if let conn = output.connection(with: .video) {
+                // Use modern iOS 17+ RotationCoordinator for horizon-level capture
+                if let coord = self.rotationCoordinator {
+                    let angle = coord.videoRotationAngleForHorizonLevelCapture
+                    if conn.isVideoRotationAngleSupported(angle) {
+                        if conn.videoRotationAngle != angle {
+                            conn.videoRotationAngle = angle
+                            NSLog("[Dashcam] RotationCoordinator updated movieOutput videoRotationAngle to: %.1f", angle)
+                        }
+                        return
+                    }
+                }
+
+                if conn.isVideoOrientationSupported {
+                    let target = AVCaptureVideoOrientation.current()
+                    if conn.videoOrientation != target {
+                        conn.videoOrientation = target
+                        NSLog("[Dashcam] Updated movieOutput videoOrientation to: %ld", target.rawValue)
+                    }
                 }
             }
         }
@@ -182,12 +200,23 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
                 session.addInput(audioInput)
             }
 
+            let coordinator = AVCaptureDevice.RotationCoordinator(device: camera, previewLayer: nil)
+            self.rotationCoordinator = coordinator
+            self.rotationObservation = coordinator.observe(\.videoRotationAngleForHorizonLevelCapture, options: [.new]) { [weak self] _, _ in
+                self?.updateMovieOrientation()
+            }
+
             let output = AVCaptureMovieFileOutput()
             output.maxRecordedDuration = CMTime(seconds: 300, preferredTimescale: 600)
             if session.canAddOutput(output) {
                 session.addOutput(output)
-                if let conn = output.connection(with: .video), conn.isVideoOrientationSupported {
-                    conn.videoOrientation = AVCaptureVideoOrientation.current()
+                if let conn = output.connection(with: .video) {
+                    let angle = coordinator.videoRotationAngleForHorizonLevelCapture
+                    if conn.isVideoRotationAngleSupported(angle) {
+                        conn.videoRotationAngle = angle
+                    } else if conn.isVideoOrientationSupported {
+                        conn.videoOrientation = AVCaptureVideoOrientation.current()
+                    }
                 }
             }
 
@@ -218,6 +247,9 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
         #if os(iOS)
         queue.async { [weak self] in
             guard let self = self else { return }
+            self.rotationObservation?.invalidate()
+            self.rotationObservation = nil
+            self.rotationCoordinator = nil
             self.movieOutput?.stopRecording()
             self.captureSession?.stopRunning()
             self.movieOutput = nil

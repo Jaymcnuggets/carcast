@@ -144,6 +144,18 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
         #endif
     }
 
+    public func prewarmPipeline(withAudio: Bool = false) {
+        #if os(iOS)
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        guard status == .authorized else { return }
+
+        queue.async { [weak self] in
+            guard let self = self, self.captureSession == nil else { return }
+            self.setupPipeline(withAudio: withAudio, autoRecord: false)
+        }
+        #endif
+    }
+
     public func startRecording(withAudio: Bool = false) {
         #if os(iOS)
         let status = AVCaptureDevice.authorizationStatus(for: .video)
@@ -165,83 +177,112 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
         self.isStarting = true
 
         queue.async { [weak self] in
-            guard let self = self, self.captureSession == nil else {
-                DispatchQueue.main.async { self?.isStarting = false }
+            guard let self = self else { return }
+
+            if let session = self.captureSession, session.isRunning, self.movieOutput != nil {
+                // Pre-warmed session ready: start writing immediately
+                DispatchQueue.main.async {
+                    self.isRecording = true
+                    self.isStarting = false
+                    self.recordingStartTime = Date()
+                    self.startNextSegment()
+                    self.impactService.startMonitoring()
+                }
                 return
             }
 
-            let session = AVCaptureSession()
-            session.beginConfiguration()
+            self.setupPipeline(withAudio: withAudio, autoRecord: true)
+        }
+        #endif
+    }
 
-            if session.canSetSessionPreset(.hd1920x1080) {
-                session.sessionPreset = .hd1920x1080
-            } else {
-                session.sessionPreset = .high
-            }
+    #if os(iOS)
+    private func setupPipeline(withAudio: Bool, autoRecord: Bool) {
+        let session = AVCaptureSession()
+        session.beginConfiguration()
 
-            // Direct device lookup is instantaneous (0.1ms vs 100ms+ discovery scan)
-            let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
-                ?? AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back)
-                ?? AVCaptureDevice.default(for: .video)
+        if session.canSetSessionPreset(.hd1920x1080) {
+            session.sessionPreset = .hd1920x1080
+        } else {
+            session.sessionPreset = .high
+        }
 
-            guard let camera = camera,
-                  let videoInput = try? AVCaptureDeviceInput(device: camera),
-                  session.canAddInput(videoInput) else {
-                session.commitConfiguration()
-                NSLog("[Dashcam] Failed to create video input from back camera")
-                DispatchQueue.main.async { self.isStarting = false }
-                return
-            }
-            session.addInput(videoInput)
+        // Direct device lookup is instantaneous (0.1ms vs 100ms+ discovery scan)
+        let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
+            ?? AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back)
+            ?? AVCaptureDevice.default(for: .video)
 
-            if withAudio, let mic = AVCaptureDevice.default(for: .audio),
-               let audioInput = try? AVCaptureDeviceInput(device: mic),
-               session.canAddInput(audioInput) {
-                session.addInput(audioInput)
-            }
+        guard let camera = camera,
+              let videoInput = try? AVCaptureDeviceInput(device: camera),
+              session.canAddInput(videoInput) else {
+            session.commitConfiguration()
+            NSLog("[Dashcam] Failed to create video input from back camera")
+            DispatchQueue.main.async { self.isStarting = false }
+            return
+        }
+        session.addInput(videoInput)
 
-            let coordinator = AVCaptureDevice.RotationCoordinator(device: camera, previewLayer: nil)
-            self.rotationCoordinator = coordinator
-            self.rotationObservation = coordinator.observe(\.videoRotationAngleForHorizonLevelCapture, options: [.new]) { [weak self] _, _ in
-                self?.updateMovieOrientation()
-            }
+        // Lock to 30fps for smooth dashcam capture without frame-rate hunting
+        do {
+            try camera.lockForConfiguration()
+            camera.activeVideoMinFrameDuration = CMTime(value: 1, timescale: 30)
+            camera.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: 30)
+            camera.unlockForConfiguration()
+        } catch {
+            NSLog("[Dashcam] Frame duration lock warning: %@", error.localizedDescription)
+        }
 
-            let output = AVCaptureMovieFileOutput()
-            output.maxRecordedDuration = CMTime(seconds: 300, preferredTimescale: 600)
-            if session.canAddOutput(output) {
-                session.addOutput(output)
-                if let conn = output.connection(with: .video) {
-                    let angle = coordinator.videoRotationAngleForHorizonLevelCapture
-                    if conn.isVideoRotationAngleSupported(angle) {
-                        conn.videoRotationAngle = angle
-                    } else if conn.isVideoOrientationSupported {
-                        conn.videoOrientation = AVCaptureVideoOrientation.current()
-                    }
+        if withAudio, let mic = AVCaptureDevice.default(for: .audio),
+           let audioInput = try? AVCaptureDeviceInput(device: mic),
+           session.canAddInput(audioInput) {
+            session.addInput(audioInput)
+        }
+
+        let coordinator = AVCaptureDevice.RotationCoordinator(device: camera, previewLayer: nil)
+        self.rotationCoordinator = coordinator
+        self.rotationObservation = coordinator.observe(\.videoRotationAngleForHorizonLevelCapture, options: [.new]) { [weak self] _, _ in
+            self?.updateMovieOrientation()
+        }
+
+        let output = AVCaptureMovieFileOutput()
+        output.maxRecordedDuration = CMTime(seconds: 300, preferredTimescale: 600)
+        if session.canAddOutput(output) {
+            session.addOutput(output)
+            if let conn = output.connection(with: .video) {
+                let angle = coordinator.videoRotationAngleForHorizonLevelCapture
+                if conn.isVideoRotationAngleSupported(angle) {
+                    conn.videoRotationAngle = angle
+                } else if conn.isVideoOrientationSupported {
+                    conn.videoOrientation = AVCaptureVideoOrientation.current()
                 }
             }
+        }
 
-            session.commitConfiguration()
+        session.commitConfiguration()
 
-            let pLayer = AVCaptureVideoPreviewLayer(session: session)
-            pLayer.videoGravity = .resizeAspectFill
+        let pLayer = AVCaptureVideoPreviewLayer(session: session)
+        pLayer.videoGravity = .resizeAspectFill
 
-            // Mount UI and preview immediately so user sees layout instantly
-            DispatchQueue.main.async {
-                self.captureSession = session
-                self.movieOutput = output
-                self.previewLayer = pLayer
+        // Start hardware capture pipeline synchronously on background queue before file writing
+        session.startRunning()
+
+        DispatchQueue.main.async {
+            self.captureSession = session
+            self.movieOutput = output
+            self.previewLayer = pLayer
+
+            if autoRecord {
                 self.isRecording = true
                 self.isStarting = false
                 self.recordingStartTime = Date()
                 self.startNextSegment()
                 self.impactService.startMonitoring()
+            } else {
+                self.isStarting = false
             }
-
-            // Spin up hardware capture pipeline asynchronously in background
-            session.startRunning()
         }
-        #endif
     }
+    #endif
 
     public func stopRecording() {
         #if os(iOS)
@@ -291,6 +332,8 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
 
     private func startNextSegment() {
         #if os(iOS)
+        guard let output = movieOutput, !output.isRecording else { return }
+
         queue.async { [weak self] in
             self?.storageManager.enforceQuota()
         }
@@ -300,7 +343,7 @@ public final class DashcamManager: NSObject, ObservableObject, @unchecked Sendab
         }
         currentOutputURL = nextURL
 
-        movieOutput?.startRecording(to: nextURL, recordingDelegate: self)
+        output.startRecording(to: nextURL, recordingDelegate: self)
         #endif
     }
 }

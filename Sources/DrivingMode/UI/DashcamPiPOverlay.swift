@@ -18,9 +18,6 @@ public struct DashcamPiPOverlay: View {
     @State private var isLarge: Bool = false
     @State private var isFullScreen: Bool = false
     @State private var showSavedNotice: Bool = false
-    @State private var timerText: String = "00:00"
-
-    private let timer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
 
     public init() {}
 
@@ -53,9 +50,7 @@ public struct DashcamPiPOverlay: View {
                                         .font(.system(size: 10, weight: .bold, design: .monospaced))
                                         .foregroundColor(.white)
 
-                                    Text(timerText)
-                                        .font(.system(size: 9, weight: .medium, design: .monospaced))
-                                        .foregroundColor(.white.opacity(0.8))
+                                    DashcamTimerText(startTime: dashcam.recordingStartTime, fontSize: 9)
 
                                     Spacer()
 
@@ -186,9 +181,7 @@ public struct DashcamPiPOverlay: View {
                                     Text("DASHCAM LIVE")
                                         .font(.system(size: 13, weight: .bold, design: .monospaced))
                                         .foregroundColor(.white)
-                                    Text(timerText)
-                                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                                        .foregroundColor(.white.opacity(0.8))
+                                    DashcamTimerText(startTime: dashcam.recordingStartTime, fontSize: 12)
                                 }
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
@@ -257,17 +250,43 @@ public struct DashcamPiPOverlay: View {
                     .transition(.opacity)
                 }
             }
+        }
+    }
+}
+
+public struct DashcamTimerText: View {
+    let startTime: Date?
+    let fontSize: CGFloat
+    @State private var text: String = "00:00"
+    private let timer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
+
+    public init(startTime: Date?, fontSize: CGFloat = 9) {
+        self.startTime = startTime
+        self.fontSize = fontSize
+    }
+
+    public var body: some View {
+        Text(text)
+            .font(.system(size: fontSize, weight: .medium, design: .monospaced))
+            .foregroundColor(.white.opacity(0.85))
             .onReceive(timer) { _ in
-                if let start = dashcam.recordingStartTime {
-                    let elapsed = Int(Date().timeIntervalSince(start))
+                guard let start = startTime else {
+                    text = "00:00"
+                    return
+                }
+                let elapsed = max(0, Int(Date().timeIntervalSince(start)))
+                let minutes = elapsed / 60
+                let seconds = elapsed % 60
+                text = String(format: "%02d:%02d", minutes, seconds)
+            }
+            .onAppear {
+                if let start = startTime {
+                    let elapsed = max(0, Int(Date().timeIntervalSince(start)))
                     let minutes = elapsed / 60
                     let seconds = elapsed % 60
-                    timerText = String(format: "%02d:%02d", minutes, seconds)
-                } else {
-                    timerText = "00:00"
+                    text = String(format: "%02d:%02d", minutes, seconds)
                 }
             }
-        }
     }
 }
 
@@ -407,7 +426,6 @@ public struct CameraPreviewRepresentable: UIViewRepresentable {
 
     public func updateUIView(_ uiView: CameraPreviewUIView, context: Context) {
         uiView.attachSession(session)
-        uiView.updateOrientation()
     }
 }
 #endif

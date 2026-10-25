@@ -377,8 +377,8 @@ extension CarPlayManager: AirPlayScreenReceiverDelegate {
     }
 
     nonisolated public func screenReceiverStateChanged(isActive: Bool) {
-        Task { @MainActor in
-            guard !self.isSimulating else { return }
+        Task { @MainActor [weak self] in
+            guard let self = self, !self.isSimulating else { return }
             guard self.state != .idle else {
                 self.isStreamingActive = false
                 return
@@ -564,8 +564,8 @@ public final class DeveloperTouchService: @unchecked Sendable {
     private init() {}
 
     public func start() {
-        queue.async {
-            guard self.listener == nil else { return }
+        queue.async { [weak self] in
+            guard let self = self, self.listener == nil else { return }
             do {
                 let params = NWParameters.tcp
                 let listener = try NWListener(using: params, on: 8999)
@@ -585,15 +585,15 @@ public final class DeveloperTouchService: @unchecked Sendable {
     }
 
     public func stop() {
-        queue.async {
-            self.listener?.cancel()
-            self.listener = nil
+        queue.async { [weak self] in
+            self?.listener?.cancel()
+            self?.listener = nil
         }
     }
 
     private func handleConnection(_ conn: NWConnection) {
         conn.start(queue: queue)
-        conn.receive(minimumIncompleteLength: 1, maximumLength: 4096) { [weak self, weak conn] data, _, _, _ in
+        conn.receive(minimumIncompleteLength: 1, maximumLength: 4096) { [weak conn] data, _, _, _ in
             guard let conn = conn, let data = data, let req = String(data: data, encoding: .utf8) else {
                 conn?.cancel()
                 return
@@ -631,6 +631,18 @@ public final class DeveloperTouchService: @unchecked Sendable {
                     CarPlayManager.shared.sendHomeButtonPress()
                 }
                 responseJson = "{\"ok\": true, \"action\": \"home\"}"
+            } else if path.starts(with: "/menu") {
+                writeAppLog("[DevTouch] Received HTTP /menu request")
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .returnToMainMenu, object: nil)
+                }
+                responseJson = "{\"ok\": true, \"action\": \"menu\"}"
+            } else if path.starts(with: "/dashcam") {
+                writeAppLog("[DevTouch] Received HTTP /dashcam request")
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .toggleDashcam, object: nil)
+                }
+                responseJson = "{\"ok\": true, \"action\": \"dashcam\"}"
             } else if path.starts(with: "/keyframe") {
                 writeAppLog("[DevTouch] Received HTTP /keyframe request")
                 DispatchQueue.main.async {
@@ -647,10 +659,17 @@ public final class DeveloperTouchService: @unchecked Sendable {
                 })
                 return
             } else if path.starts(with: "/status") {
-                let state = CarPlayManager.shared.state.rawValue
-                let frames = CarPlayManager.shared.totalFramesReceived
-                let active = CarPlayManager.shared.isStreamingActive
-                responseJson = "{\"ok\": true, \"state\": \"\(state)\", \"frames\": \(frames), \"streaming\": \(active)}"
+                DispatchQueue.main.async {
+                    let state = CarPlayManager.shared.state.rawValue
+                    let frames = CarPlayManager.shared.totalFramesReceived
+                    let active = CarPlayManager.shared.isStreamingActive
+                    let statusJson = "{\"ok\": true, \"state\": \"\(state)\", \"frames\": \(frames), \"streaming\": \(active)}"
+                    let httpResp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: \(statusJson.utf8.count)\r\nConnection: close\r\n\r\n\(statusJson)"
+                    conn.send(content: httpResp.data(using: .utf8), completion: .contentProcessed { _ in
+                        conn.cancel()
+                    })
+                }
+                return
             }
 
             let httpResp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: \(responseJson.utf8.count)\r\nConnection: close\r\n\r\n\(responseJson)"
@@ -659,4 +678,9 @@ public final class DeveloperTouchService: @unchecked Sendable {
             })
         }
     }
+}
+
+public extension Notification.Name {
+    static let returnToMainMenu = Notification.Name("dev.unordinarylabs.drivingmode.returnToMainMenu")
+    static let toggleDashcam = Notification.Name("dev.unordinarylabs.drivingmode.toggleDashcam")
 }

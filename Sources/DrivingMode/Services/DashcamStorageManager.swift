@@ -37,10 +37,15 @@ public final class DashcamStorageManager: @unchecked Sendable {
         try? fileManager.createDirectory(at: emergencyDirectory, withIntermediateDirectories: true)
     }
 
+    private static let segmentDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyyMMdd_HHmmss"
+        return f
+    }()
+
     public func newSegmentURL() -> URL {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMdd_HHmmss"
-        let timestamp = formatter.string(from: Date())
+        let timestamp = Self.segmentDateFormatter.string(from: Date())
         return recordingsDirectory.appendingPathComponent("dashcam_\(timestamp).mp4")
     }
 

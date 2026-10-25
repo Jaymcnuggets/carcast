@@ -15,7 +15,6 @@ public struct CarPlayActiveScreenView: View {
     @ObservedObject var manager = CarPlayManager.shared
     @ObservedObject var config = DrivingModeConfig.shared
     @ObservedObject var dashcam = DashcamManager.shared
-    @ObservedObject var telemetry = VehicleTelemetry.shared
 
     @State private var touchIndicatorPoint: CGPoint? = nil
     public var onReturnToMenu: (() -> Void)? = nil
@@ -130,14 +129,7 @@ public struct CarPlayActiveScreenView: View {
         let trailingInset = max(geo.safeAreaInsets.trailing, isPortrait ? 18 : 44)
         let topInset = max(geo.safeAreaInsets.top, 14)
 
-        let streamAspect: Double = (manager.currentStreamResolution.width > 0 && manager.currentStreamResolution.height > 0)
-            ? Double(manager.currentStreamResolution.width) / Double(manager.currentStreamResolution.height)
-            : (1344.0 / 720.0)
-        let viewAspect = Double(geo.size.width / geo.size.height)
-        let renderH = viewAspect < streamAspect ? CGFloat(Double(geo.size.width) / streamAspect) : geo.size.height
-        let topGap = max(0, geo.size.height - renderH)
-
-        VStack(spacing: 10) {
+        Group {
             if isPortrait {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(alignment: .center) {
@@ -168,107 +160,10 @@ public struct CarPlayActiveScreenView: View {
                     statusCluster
                 }
             }
-
-            // Automotive Cockpit HUD (Telemetry Cluster) when generous top letterbox is present
-            if topGap >= 120 {
-                cockpitTelemetryHUD(width: geo.size.width)
-                    .transition(.opacity)
-            }
         }
         .padding(.leading, leadingInset)
         .padding(.trailing, trailingInset)
         .padding(.top, topInset)
-    }
-
-    private func cockpitTelemetryHUD(width: CGFloat) -> some View {
-        HStack(spacing: 16) {
-            // Speedometer & Driving Gear
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("\(Int(telemetry.speedMph))")
-                        .font(.system(size: 32, weight: .heavy, design: .rounded))
-                        .foregroundColor(.white)
-                    Text("MPH")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundColor(.cyan)
-                }
-
-                // PRND Selector
-                HStack(spacing: 4) {
-                    ForEach(["P", "R", "N", "D"], id: \.self) { g in
-                        Text(g)
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundColor(telemetry.gear == g ? .cyan : .white.opacity(0.35))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 3)
-                            .background(telemetry.gear == g ? Color.cyan.opacity(0.25) : Color.clear)
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                    }
-                }
-                .padding(3)
-                .background(Color.white.opacity(0.06))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-            }
-
-            Spacer()
-
-            // Battery & Range Gauge
-            HStack(spacing: 10) {
-                HStack(spacing: 5) {
-                    Image(systemName: "battery.75percent")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.green)
-                    Text("\(Int(telemetry.batteryPercent * 100))%")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.white.opacity(0.06))
-                .clipShape(Capsule())
-
-                HStack(spacing: 5) {
-                    Image(systemName: "fuelpump.fill")
-                        .font(.system(size: 12))
-                        .foregroundColor(.cyan)
-                    Text("\(telemetry.rangeMiles) mi")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white.opacity(0.9))
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.white.opacity(0.06))
-                .clipShape(Capsule())
-            }
-
-            if width >= 640 {
-                Spacer()
-
-                // Media Now-Playing Pill
-                HStack(spacing: 6) {
-                    Image(systemName: "music.note")
-                        .font(.system(size: 12))
-                        .foregroundColor(.cyan)
-                    Text("\(telemetry.currentArtist) – \(telemetry.currentTrackTitle)")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.white.opacity(0.85))
-                        .lineLimit(1)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.white.opacity(0.06))
-                .clipShape(Capsule())
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(Color(white: 0.08).opacity(0.88))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.4), radius: 8, x: 0, y: 4)
     }
 
     // MARK: - Subviews

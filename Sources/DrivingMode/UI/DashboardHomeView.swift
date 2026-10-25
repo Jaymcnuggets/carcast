@@ -117,7 +117,7 @@ public struct DashboardHomeView: View {
 
                     VStack(spacing: 0) {
                         // Top Cockpit Status Bar
-                        cockpitHeaderBar
+                        cockpitHeaderBar(width: geo.size.width)
                             .padding(.leading, max(geo.safeAreaInsets.leading, 32))
                             .padding(.trailing, max(geo.safeAreaInsets.trailing, 32))
                             .padding(.top, 12)
@@ -132,7 +132,7 @@ public struct DashboardHomeView: View {
                         }
 
                         // Bottom Navigation Action Bar
-                        cockpitBottomBar
+                        cockpitBottomBar(width: geo.size.width)
                             .padding(.leading, max(geo.safeAreaInsets.leading, 32))
                             .padding(.trailing, max(geo.safeAreaInsets.trailing, 32))
                             .padding(.vertical, 12)
@@ -201,37 +201,36 @@ public struct DashboardHomeView: View {
 
     // MARK: - Cockpit Header Bar
 
-    private var cockpitHeaderBar: some View {
-        HStack(alignment: .center, spacing: 14) {
+    private func cockpitHeaderBar(width: CGFloat) -> some View {
+        HStack(alignment: .center, spacing: 12) {
             // Vehicle Brand Emblem & Title
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 ZStack {
                     Circle()
                         .fill(Color(white: 0.15))
-                        .frame(width: 38, height: 38)
+                        .frame(width: 36, height: 36)
                         .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
 
                     Image(systemName: "car.side.fill")
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.cyan)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(config.carName.uppercased())
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
+                        .minimumScaleFactor(0.8)
 
-                    HStack(spacing: 5) {
+                    HStack(spacing: 4) {
                         Circle()
                             .fill(Color.green)
-                            .frame(width: 6, height: 6)
-                        Text("COCKPIT ACTIVE")
+                            .frame(width: 5, height: 5)
+                        Text(width >= 560 ? "COCKPIT ACTIVE" : "ACTIVE")
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
                             .foregroundColor(.cyan.opacity(0.9))
                             .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
                     }
                 }
             }
@@ -239,7 +238,7 @@ public struct DashboardHomeView: View {
             Spacer()
 
             // Dynamic Central Status Pill
-            HStack(spacing: 7) {
+            HStack(spacing: 6) {
                 Circle()
                     .fill(statusColor)
                     .frame(width: 8, height: 8)
@@ -248,47 +247,45 @@ public struct DashboardHomeView: View {
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
                     .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
 
-                if manager.state == .streaming {
+                if width >= 640 && manager.state == .streaming {
                     Text("•")
                         .foregroundColor(.white.opacity(0.4))
                     Text("\(manager.totalFramesReceived) frames")
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundColor(.white.opacity(0.7))
                         .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 7)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
             .background(Color(white: 0.12).opacity(0.85))
             .clipShape(Capsule())
             .overlay(
                 Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1)
             )
-            .fixedSize(horizontal: true, vertical: true)
+            .lineLimit(1)
 
             Spacer()
 
             // Right System Indicators Cluster
             HStack(spacing: 8) {
-                // Wi-Fi Badge
-                HStack(spacing: 5) {
-                    Image(systemName: "wifi")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.white.opacity(0.8))
-                    Text(config.wifiSSID.isEmpty ? "Direct" : config.wifiSSID)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white.opacity(0.85))
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
+                if width >= 560 {
+                    // Wi-Fi Badge
+                    HStack(spacing: 5) {
+                        Image(systemName: "wifi")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white.opacity(0.8))
+                        Text(config.wifiSSID.isEmpty ? "Direct" : config.wifiSSID)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white.opacity(0.85))
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Capsule())
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(Color.white.opacity(0.08))
-                .clipShape(Capsule())
-                .fixedSize(horizontal: true, vertical: true)
 
                 // Live Clock
                 CockpitClockView()
@@ -300,18 +297,18 @@ public struct DashboardHomeView: View {
 
     @ViewBuilder
     private func cockpitCardsLayout(width: CGFloat) -> some View {
-        if width >= 860 {
-            // Wide Panoramic 3-Card Deck (iPad, CarPlay Ultra wide display)
+        if width >= 1150 {
+            // Wide Panoramic 3-Card Deck (Desktop, Ultra-wide display >= 1150)
             HStack(alignment: .top, spacing: 14) {
                 carPlayHeroCard
                     .frame(maxWidth: .infinity)
                 dashcamControlCard
                     .frame(maxWidth: .infinity)
-                cockpitControlsCard
+                cockpitControlsCard(width: width)
                     .frame(maxWidth: .infinity)
             }
-        } else if width >= 480 {
-            // Dual-Pane Automotive Cockpit Grid (iPhone Duo, iPhone Pro Max Landscape)
+        } else if width >= 520 {
+            // Balanced Bento Grid (iPhone Duo Opened 951pt, iPad, Landscape phones)
             VStack(spacing: 14) {
                 HStack(alignment: .top, spacing: 14) {
                     carPlayHeroCard
@@ -320,15 +317,15 @@ public struct DashboardHomeView: View {
                         .frame(maxWidth: .infinity)
                 }
 
-                cockpitControlsCard
+                cockpitControlsCard(width: width)
                     .frame(maxWidth: .infinity)
             }
         } else {
-            // Compact / Portrait Stack
+            // Compact / Cover Screen Vertical Stack
             VStack(spacing: 14) {
                 carPlayHeroCard
                 dashcamControlCard
-                cockpitControlsCard
+                cockpitControlsCard(width: width)
             }
         }
     }
@@ -346,9 +343,13 @@ public struct DashboardHomeView: View {
                     Text("Apple CarPlay")
                         .font(.system(size: 19, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                     Text("Wireless & USB Digital Receiver")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.white.opacity(0.6))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
 
                 Spacer()
@@ -360,11 +361,13 @@ public struct DashboardHomeView: View {
                     Text(manager.isStreamingActive ? "ACTIVE" : "STANDBY")
                         .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .foregroundColor(.white)
+                        .lineLimit(1)
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(Color.white.opacity(0.1))
                 .clipShape(Capsule())
+                .fixedSize(horizontal: true, vertical: true)
             }
 
             // Status Description
@@ -525,9 +528,13 @@ public struct DashboardHomeView: View {
                     Text("Smart Dashcam")
                         .font(.system(size: 19, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                     Text("Rolling Loop & Impact Sentry")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.white.opacity(0.6))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
 
                 Spacer()
@@ -544,6 +551,7 @@ public struct DashboardHomeView: View {
                     .background(Color.red.opacity(0.25))
                     .clipShape(Capsule())
                     .overlay(Capsule().stroke(Color.red.opacity(0.6), lineWidth: 1))
+                    .fixedSize(horizontal: true, vertical: true)
                 } else {
                     Text("STANDBY")
                         .font(.system(size: 10, weight: .bold, design: .monospaced))
@@ -552,6 +560,8 @@ public struct DashboardHomeView: View {
                         .padding(.vertical, 4)
                         .background(Color.white.opacity(0.08))
                         .clipShape(Capsule())
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: true)
                 }
             }
 
@@ -657,14 +667,14 @@ public struct DashboardHomeView: View {
 
     // MARK: - Card 3: Cockpit Controls & System Settings
 
-    private var cockpitControlsCard: some View {
+    private func cockpitControlsCard(width: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             // Header Row
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
                         .fill(Color.cyan.opacity(0.15))
-                        .frame(width: 48, height: 48)
+                        .frame(width: 44, height: 44)
 
                     Image(systemName: "slider.horizontal.3")
                         .font(.system(size: 20, weight: .bold))
@@ -675,131 +685,69 @@ public struct DashboardHomeView: View {
                     Text("Cockpit Controls")
                         .font(.system(size: 19, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                     Text("Audio & Display Routing")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.white.opacity(0.6))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
 
                 Spacer()
-            }
 
-            // Audio Routing Quick Toggle
-            VStack(alignment: .leading, spacing: 6) {
-                Text("AUDIO ROUTING")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.5))
-
-                HStack(spacing: 8) {
+                if width >= 520 {
                     Button {
-                        config.audioRoutingMode = .airPlayInBand
+                        showingSettings = true
                     } label: {
                         HStack(spacing: 6) {
-                            Image(systemName: "speaker.wave.2.fill")
-                                .font(.system(size: 13))
-                            Text("In-Band")
-                                .font(.system(size: 13, weight: .bold))
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text("SETTINGS")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
                         }
-                        .foregroundColor(config.audioRoutingMode == .airPlayInBand ? .white : .white.opacity(0.6))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(config.audioRoutingMode == .airPlayInBand ? Color.cyan.opacity(0.35) : Color.white.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(config.audioRoutingMode == .airPlayInBand ? Color.cyan : Color.white.opacity(0.1), lineWidth: 1)
-                        )
-                    }
-
-                    Button {
-                        config.audioRoutingMode = .carBluetoothPassthrough
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "antenna.radiowaves.left.and.right")
-                                .font(.system(size: 13))
-                            Text("Bluetooth")
-                                .font(.system(size: 13, weight: .bold))
-                        }
-                        .foregroundColor(config.audioRoutingMode == .carBluetoothPassthrough ? .white : .white.opacity(0.6))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(config.audioRoutingMode == .carBluetoothPassthrough ? Color.orange.opacity(0.35) : Color.white.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(config.audioRoutingMode == .carBluetoothPassthrough ? Color.orange : Color.white.opacity(0.1), lineWidth: 1)
-                        )
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .frame(height: 36)
+                        .background(Color.white.opacity(0.1))
+                        .clipShape(Capsule())
+                        .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
                     }
                 }
             }
 
-            // Display Mode Quick Toggle
-            VStack(alignment: .leading, spacing: 6) {
-                Text("DISPLAY GEOMETRY")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.5))
-
-                HStack(spacing: 8) {
-                    Button {
-                        config.fillScreenEdgeToEdge = false
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "aspectratio")
-                                .font(.system(size: 13))
-                            Text("Bottom Fit")
-                                .font(.system(size: 13, weight: .bold))
-                        }
-                        .foregroundColor(!config.fillScreenEdgeToEdge ? .white : .white.opacity(0.6))
+            if width >= 520 {
+                HStack(alignment: .top, spacing: 14) {
+                    audioRoutingSection
                         .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(!config.fillScreenEdgeToEdge ? Color.blue.opacity(0.35) : Color.white.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(!config.fillScreenEdgeToEdge ? Color.blue : Color.white.opacity(0.1), lineWidth: 1)
-                        )
-                    }
+                    displayGeometrySection
+                        .frame(maxWidth: .infinity)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    audioRoutingSection
+                    displayGeometrySection
 
                     Button {
-                        config.fillScreenEdgeToEdge = true
+                        showingSettings = true
                     } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
-                                .font(.system(size: 13))
-                            Text("Edge-to-Edge")
-                                .font(.system(size: 13, weight: .bold))
+                        HStack(spacing: 8) {
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 15, weight: .semibold))
+                            Text("ALL SETTINGS")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
                         }
-                        .foregroundColor(config.fillScreenEdgeToEdge ? .white : .white.opacity(0.6))
+                        .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(config.fillScreenEdgeToEdge ? Color.purple.opacity(0.35) : Color.white.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .frame(height: 48)
+                        .background(Color.white.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(config.fillScreenEdgeToEdge ? Color.purple : Color.white.opacity(0.1), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 1.2)
                         )
                     }
                 }
-            }
-
-            // Advanced Settings Launcher Button
-            Button {
-                showingSettings = true
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                    Text("ALL SETTINGS")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Color.white.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1.2)
-                )
             }
         }
         .padding(18)
@@ -811,9 +759,109 @@ public struct DashboardHomeView: View {
         )
     }
 
+    private var audioRoutingSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("AUDIO ROUTING")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(.white.opacity(0.5))
+
+            HStack(spacing: 8) {
+                Button {
+                    config.audioRoutingMode = .airPlayInBand
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "speaker.wave.2.fill")
+                            .font(.system(size: 13))
+                        Text("In-Band")
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    .foregroundColor(config.audioRoutingMode == .airPlayInBand ? .white : .white.opacity(0.6))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(config.audioRoutingMode == .airPlayInBand ? Color.cyan.opacity(0.35) : Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(config.audioRoutingMode == .airPlayInBand ? Color.cyan : Color.white.opacity(0.1), lineWidth: 1)
+                    )
+                }
+
+                Button {
+                    config.audioRoutingMode = .carBluetoothPassthrough
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .font(.system(size: 13))
+                        Text("Bluetooth")
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    .foregroundColor(config.audioRoutingMode == .carBluetoothPassthrough ? .white : .white.opacity(0.6))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(config.audioRoutingMode == .carBluetoothPassthrough ? Color.orange.opacity(0.35) : Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(config.audioRoutingMode == .carBluetoothPassthrough ? Color.orange : Color.white.opacity(0.1), lineWidth: 1)
+                    )
+                }
+            }
+        }
+    }
+
+    private var displayGeometrySection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("DISPLAY GEOMETRY")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(.white.opacity(0.5))
+
+            HStack(spacing: 8) {
+                Button {
+                    config.fillScreenEdgeToEdge = false
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "aspectratio")
+                            .font(.system(size: 13))
+                        Text("Bottom Fit")
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    .foregroundColor(!config.fillScreenEdgeToEdge ? .white : .white.opacity(0.6))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(!config.fillScreenEdgeToEdge ? Color.blue.opacity(0.35) : Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(!config.fillScreenEdgeToEdge ? Color.blue : Color.white.opacity(0.1), lineWidth: 1)
+                    )
+                }
+
+                Button {
+                    config.fillScreenEdgeToEdge = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
+                            .font(.system(size: 13))
+                        Text("Edge-to-Edge")
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    .foregroundColor(config.fillScreenEdgeToEdge ? .white : .white.opacity(0.6))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(config.fillScreenEdgeToEdge ? Color.purple.opacity(0.35) : Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(config.fillScreenEdgeToEdge ? Color.purple : Color.white.opacity(0.1), lineWidth: 1)
+                    )
+                }
+            }
+        }
+    }
+
     // MARK: - Cockpit Bottom Navigation Dock Bar
 
-    private var cockpitBottomBar: some View {
+    private func cockpitBottomBar(width: CGFloat) -> some View {
         HStack(spacing: 12) {
             // Pairing Guide
             Button {
@@ -822,11 +870,11 @@ public struct DashboardHomeView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "book.pages.fill")
                         .font(.system(size: 14, weight: .bold))
-                    Text("Pairing Guide")
+                    Text(width < 450 ? "Guide" : "Pairing Guide")
                         .font(.system(size: 14, weight: .semibold))
                 }
                 .foregroundColor(.white.opacity(0.85))
-                .padding(.horizontal, 16)
+                .padding(.horizontal, width < 450 ? 12 : 16)
                 .frame(height: 48)
                 .background(Color(white: 0.12))
                 .clipShape(Capsule())
@@ -840,11 +888,11 @@ public struct DashboardHomeView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "iphone.and.arrow.forward")
                         .font(.system(size: 14, weight: .bold))
-                    Text("Connect Phone")
+                    Text(width < 450 ? "Connect" : "Connect Phone")
                         .font(.system(size: 14, weight: .semibold))
                 }
                 .foregroundColor(.white.opacity(0.85))
-                .padding(.horizontal, 16)
+                .padding(.horizontal, width < 450 ? 12 : 16)
                 .frame(height: 48)
                 .background(Color(white: 0.12))
                 .clipShape(Capsule())
@@ -861,11 +909,11 @@ public struct DashboardHomeView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "stop.circle.fill")
                             .font(.system(size: 15, weight: .bold))
-                        Text("Stop Receiver")
+                        Text(width < 450 ? "Stop" : "Stop Receiver")
                             .font(.system(size: 14, weight: .bold, design: .rounded))
                     }
                     .foregroundColor(Color(red: 1.0, green: 0.35, blue: 0.3))
-                    .padding(.horizontal, 18)
+                    .padding(.horizontal, width < 450 ? 14 : 18)
                     .frame(height: 48)
                     .background(Color.red.opacity(0.18))
                     .clipShape(Capsule())

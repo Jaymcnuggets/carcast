@@ -48,10 +48,13 @@ public struct CarPlayActiveScreenView: View {
                         .allowsHitTesting(false)
                 }
 
-                // Top Controls & Status Bar (Automotive Touch Enclosure)
+                // Controls & Status Bar (Automotive Touch Enclosure)
                 VStack(spacing: 0) {
                     topControls(geo: geo)
                     Spacer()
+                    if geo.size.width < geo.size.height {
+                        portraitBottomCockpit(geo: geo)
+                    }
                 }
 
                 // Floating Dashcam PiP Viewfinder
@@ -125,25 +128,16 @@ public struct CarPlayActiveScreenView: View {
     @ViewBuilder
     private func topControls(geo: GeometryProxy) -> some View {
         let isPortrait = geo.size.width < geo.size.height
-        let leadingInset = max(geo.safeAreaInsets.leading, isPortrait ? 18 : 44)
-        let trailingInset = max(geo.safeAreaInsets.trailing, isPortrait ? 18 : 44)
+        let leadingInset = max(geo.safeAreaInsets.leading, 16)
+        let trailingInset = max(geo.safeAreaInsets.trailing, 16)
         let topInset = max(geo.safeAreaInsets.top, 14)
 
         Group {
             if isPortrait {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .center) {
-                        menuButton
-                        Spacer()
-                        statusCluster
-                    }
-                    HStack(spacing: 10) {
-                        dashcamButton
-                        if dashcam.isRecording {
-                            lockClipButton
-                        }
-                        Spacer()
-                    }
+                HStack(alignment: .center) {
+                    menuButton
+                    Spacer()
+                    statusCluster
                 }
             } else {
                 HStack(alignment: .center, spacing: 12) {
@@ -164,6 +158,39 @@ public struct CarPlayActiveScreenView: View {
         .padding(.leading, leadingInset)
         .padding(.trailing, trailingInset)
         .padding(.top, topInset)
+    }
+
+    // MARK: - Portrait Bottom Cockpit Deck
+
+    @ViewBuilder
+    private func portraitBottomCockpit(geo: GeometryProxy) -> some View {
+        let hInset = max(geo.safeAreaInsets.leading, 16)
+        let bottomInset = max(geo.safeAreaInsets.bottom, 12)
+
+        VStack(spacing: 10) {
+            // Row 1: Primary Action & CarPlay Home Controls
+            HStack(spacing: 10) {
+                dashcamButton
+
+                if dashcam.isRecording {
+                    lockClipButton
+                }
+
+                carPlayHomeButton
+            }
+
+            // Row 2: Audio & Quick Routing Controls
+            HStack(spacing: 10) {
+                audioRoutingToggle
+
+                Spacer()
+
+                stopSessionButton
+            }
+        }
+        .padding(.horizontal, hInset)
+        .padding(.bottom, bottomInset)
+        .padding(.top, 8)
     }
 
     // MARK: - Subviews
@@ -287,5 +314,77 @@ public struct CarPlayActiveScreenView: View {
                 .stroke(Color.white.opacity(0.22), lineWidth: 1.2)
         )
         .shadow(color: Color.black.opacity(0.4), radius: 8, x: 0, y: 4)
+    }
+
+    private var carPlayHomeButton: some View {
+        Button {
+            CarPlayManager.shared.sendHomeButtonPress()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "circle.grid.2x2.fill")
+                    .font(.system(size: 14, weight: .bold))
+                Text("HOME")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+            }
+            .foregroundColor(.white)
+            .frame(height: 48)
+            .padding(.horizontal, 16)
+            .background(Color.white.opacity(0.12))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Color.white.opacity(0.22), lineWidth: 1.2)
+            )
+            .shadow(color: Color.black.opacity(0.3), radius: 6, x: 0, y: 3)
+        }
+    }
+
+    private var audioRoutingToggle: some View {
+        Button {
+            config.audioRoutingMode = (config.audioRoutingMode == .airPlayInBand ? .carBluetoothPassthrough : .airPlayInBand)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: config.audioRoutingMode == .airPlayInBand ? "speaker.wave.2.fill" : "bonjour")
+                    .font(.system(size: 12, weight: .semibold))
+                Text(config.audioRoutingMode == .airPlayInBand ? "IN-BAND AUDIO" : "BT PASSTHROUGH")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+            }
+            .foregroundColor(config.audioRoutingMode == .airPlayInBand ? .cyan : .yellow)
+            .frame(height: 40)
+            .padding(.horizontal, 12)
+            .background(Color(white: 0.12).opacity(0.85))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
+            )
+        }
+    }
+
+    private var stopSessionButton: some View {
+        Button {
+            manager.stopReceiver()
+            if let onReturn = onReturnToMenu {
+                onReturn()
+            } else {
+                dismiss()
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "stop.circle.fill")
+                    .font(.system(size: 13, weight: .bold))
+                Text("DISCONNECT")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+            }
+            .foregroundColor(Color(red: 1.0, green: 0.35, blue: 0.3))
+            .frame(height: 40)
+            .padding(.horizontal, 12)
+            .background(Color.red.opacity(0.16))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Color.red.opacity(0.5), lineWidth: 1)
+            )
+        }
     }
 }

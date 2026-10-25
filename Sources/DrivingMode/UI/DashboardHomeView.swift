@@ -121,26 +121,30 @@ public struct DashboardHomeView: View {
                     )
                     .ignoresSafeArea()
 
+                    let isCompact = geo.size.width < 520
+                    let hLeading = isCompact ? max(geo.safeAreaInsets.leading, 16) : max(geo.safeAreaInsets.leading, 32)
+                    let hTrailing = isCompact ? max(geo.safeAreaInsets.trailing, 16) : max(geo.safeAreaInsets.trailing, 32)
+
                     VStack(spacing: 0) {
                         // Top Cockpit Status Bar
                         cockpitHeaderBar(width: geo.size.width)
-                            .padding(.leading, max(geo.safeAreaInsets.leading, 32))
-                            .padding(.trailing, max(geo.safeAreaInsets.trailing, 32))
+                            .padding(.leading, hLeading)
+                            .padding(.trailing, hTrailing)
                             .padding(.top, max(geo.safeAreaInsets.top, 12))
                             .padding(.bottom, 12)
 
                         // Main Cockpit Center Stage
                         ScrollView(.vertical, showsIndicators: false) {
                             cockpitCardsLayout(width: geo.size.width)
-                                .padding(.leading, max(geo.safeAreaInsets.leading, 32))
-                                .padding(.trailing, max(geo.safeAreaInsets.trailing, 32))
-                                .padding(.vertical, 6)
+                                .padding(.leading, hLeading)
+                                .padding(.trailing, hTrailing)
+                                .padding(.vertical, isCompact ? 4 : 6)
                         }
 
                         // Bottom Navigation Action Bar
                         cockpitBottomBar(width: geo.size.width)
-                            .padding(.leading, max(geo.safeAreaInsets.leading, 32))
-                            .padding(.trailing, max(geo.safeAreaInsets.trailing, 32))
+                            .padding(.leading, hLeading)
+                            .padding(.trailing, hTrailing)
                             .padding(.bottom, max(geo.safeAreaInsets.bottom, 12))
                     }
 
@@ -208,23 +212,24 @@ public struct DashboardHomeView: View {
     // MARK: - Cockpit Header Bar
 
     private func cockpitHeaderBar(width: CGFloat) -> some View {
-        HStack(alignment: .center, spacing: 12) {
+        let isCompact = width < 520
+        return HStack(alignment: .center, spacing: isCompact ? 8 : 12) {
             // Vehicle Brand Emblem & Title
-            HStack(spacing: 8) {
+            HStack(spacing: isCompact ? 6 : 8) {
                 ZStack {
                     Circle()
                         .fill(Color(white: 0.15))
-                        .frame(width: 36, height: 36)
+                        .frame(width: isCompact ? 32 : 36, height: isCompact ? 32 : 36)
                         .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
 
                     Image(systemName: "car.side.fill")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: isCompact ? 14 : 16, weight: .bold))
                         .foregroundColor(.cyan)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(config.carName.uppercased())
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .font(.system(size: isCompact ? 11 : 12, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -234,7 +239,7 @@ public struct DashboardHomeView: View {
                             .fill(Color.green)
                             .frame(width: 5, height: 5)
                         Text(width >= 560 ? "COCKPIT ACTIVE" : "ACTIVE")
-                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .font(.system(size: isCompact ? 8 : 9, weight: .bold, design: .monospaced))
                             .foregroundColor(.cyan.opacity(0.9))
                             .lineLimit(1)
                     }
@@ -243,14 +248,14 @@ public struct DashboardHomeView: View {
 
             Spacer()
 
-            // Dynamic Central Status Pill
-            HStack(spacing: 6) {
+            // Dynamic Central / Inline Status Pill
+            HStack(spacing: 5) {
                 Circle()
                     .fill(statusColor)
-                    .frame(width: 8, height: 8)
+                    .frame(width: 7, height: 7)
 
                 Text(statusText.uppercased())
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .font(.system(size: isCompact ? 9 : 11, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
                     .lineLimit(1)
 
@@ -263,8 +268,8 @@ public struct DashboardHomeView: View {
                         .lineLimit(1)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.horizontal, isCompact ? 9 : 12)
+            .padding(.vertical, isCompact ? 5 : 6)
             .background(Color(white: 0.12).opacity(0.85))
             .clipShape(Capsule())
             .overlay(
@@ -272,7 +277,9 @@ public struct DashboardHomeView: View {
             )
             .lineLimit(1)
 
-            Spacer()
+            if !isCompact {
+                Spacer()
+            }
 
             // Right System Indicators Cluster
             HStack(spacing: 8) {
@@ -306,9 +313,9 @@ public struct DashboardHomeView: View {
         if width >= 1150 {
             // Wide Panoramic 3-Card Deck (Desktop, Ultra-wide display >= 1150)
             HStack(alignment: .top, spacing: 14) {
-                carPlayHeroCard
+                carPlayHeroCard(width: width)
                     .frame(maxWidth: .infinity)
-                dashcamControlCard
+                dashcamControlCard(width: width)
                     .frame(maxWidth: .infinity)
                 cockpitControlsCard(width: width)
                     .frame(maxWidth: .infinity)
@@ -317,9 +324,9 @@ public struct DashboardHomeView: View {
             // Balanced Bento Grid (iPhone Duo Opened 951pt, iPad, Landscape phones)
             VStack(spacing: 14) {
                 HStack(alignment: .top, spacing: 14) {
-                    carPlayHeroCard
+                    carPlayHeroCard(width: width)
                         .frame(maxWidth: .infinity)
-                    dashcamControlCard
+                    dashcamControlCard(width: width)
                         .frame(maxWidth: .infinity)
                 }
 
@@ -327,10 +334,10 @@ public struct DashboardHomeView: View {
                     .frame(maxWidth: .infinity)
             }
         } else {
-            // Compact / Cover Screen Vertical Stack
-            VStack(spacing: 14) {
-                carPlayHeroCard
-                dashcamControlCard
+            // Compact / Cover Screen Vertical Stack (iPhone Duo Closed 466pt, Portrait Phones)
+            VStack(spacing: 10) {
+                carPlayHeroCard(width: width)
+                dashcamControlCard(width: width)
                 cockpitControlsCard(width: width)
             }
         }
@@ -338,21 +345,22 @@ public struct DashboardHomeView: View {
 
     // MARK: - Card 1: Apple CarPlay Hero Launchpad
 
-    private var carPlayHeroCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private func carPlayHeroCard(width: CGFloat) -> some View {
+        let isCompact = width < 520
+        return VStack(alignment: .leading, spacing: isCompact ? 10 : 14) {
             // Header Row
-            HStack(spacing: 12) {
+            HStack(spacing: isCompact ? 8 : 12) {
                 drivingModeAppIcon
-                    .frame(width: 52, height: 52)
+                    .frame(width: isCompact ? 42 : 52, height: isCompact ? 42 : 52)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Apple CarPlay")
-                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                        .font(.system(size: isCompact ? 16 : 19, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
                     Text("Wireless & USB Digital Receiver")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: isCompact ? 10 : 11, weight: .medium))
                         .foregroundColor(.white.opacity(0.6))
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
@@ -360,42 +368,46 @@ public struct DashboardHomeView: View {
 
                 Spacer()
 
-                HStack(spacing: 5) {
+                HStack(spacing: 4) {
                     Circle()
                         .fill(manager.isStreamingActive ? Color.green : Color.blue)
-                        .frame(width: 7, height: 7)
+                        .frame(width: 6, height: 6)
                     Text(manager.isStreamingActive ? "ACTIVE" : "STANDBY")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .font(.system(size: isCompact ? 9 : 10, weight: .bold, design: .monospaced))
                         .foregroundColor(.white)
                         .lineLimit(1)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .padding(.horizontal, isCompact ? 7 : 8)
+                .padding(.vertical, isCompact ? 3 : 4)
                 .background(Color.white.opacity(0.1))
                 .clipShape(Capsule())
                 .fixedSize(horizontal: true, vertical: true)
             }
 
             // Status Description
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 if manager.isStreamingActive {
                     Text("CarPlay session is streaming live to this screen.")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: isCompact ? 12 : 13, weight: .medium))
                         .foregroundColor(.white.opacity(0.85))
-                    Text("H.264 video hardware decoded with zero frame drops.")
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundColor(.white.opacity(0.55))
+                    if !isCompact {
+                        Text("H.264 video hardware decoded with zero frame drops.")
+                            .font(.system(size: 11, weight: .regular))
+                            .foregroundColor(.white.opacity(0.55))
+                    }
                 } else {
                     Text("Connect your iPhone via USB or Wireless CarPlay.")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: isCompact ? 12 : 13, weight: .medium))
                         .foregroundColor(.white.opacity(0.85))
-                    Text(manager.stateReason)
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
-                        .foregroundColor(.white.opacity(0.55))
-                        .lineLimit(2)
+                    if !isCompact {
+                        Text(manager.stateReason)
+                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .foregroundColor(.white.opacity(0.55))
+                            .lineLimit(2)
+                    }
                 }
             }
-            .frame(minHeight: 44)
+            .frame(minHeight: isCompact ? 22 : 44)
 
             // Primary Launch / Control Action Button
             if manager.state == .streaming {
@@ -406,13 +418,13 @@ public struct DashboardHomeView: View {
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "play.tv.fill")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: isCompact ? 15 : 16, weight: .bold))
                         Text("RETURN TO CARPLAY")
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .font(.system(size: isCompact ? 14 : 15, weight: .bold, design: .rounded))
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 50)
+                    .frame(height: isCompact ? 46 : 50)
                     .background(
                         LinearGradient(
                             colors: [Color.blue, Color(red: 0.1, green: 0.4, blue: 0.9)],
@@ -420,7 +432,7 @@ public struct DashboardHomeView: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: isCompact ? 12 : 14, style: .continuous))
                     .shadow(color: Color.blue.opacity(0.4), radius: 10, x: 0, y: 5)
                 }
             } else {
@@ -430,13 +442,13 @@ public struct DashboardHomeView: View {
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "play.tv.fill")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: isCompact ? 15 : 16, weight: .bold))
                         Text("SIMULATE CARPLAY")
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .font(.system(size: isCompact ? 14 : 15, weight: .bold, design: .rounded))
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 50)
+                    .frame(height: isCompact ? 46 : 50)
                     .background(
                         LinearGradient(
                             colors: [Color(red: 0.1, green: 0.7, blue: 0.4), Color(red: 0.05, green: 0.5, blue: 0.3)],
@@ -444,7 +456,7 @@ public struct DashboardHomeView: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: isCompact ? 12 : 14, style: .continuous))
                     .shadow(color: Color.green.opacity(0.35), radius: 10, x: 0, y: 5)
                 }
                 #else
@@ -453,13 +465,13 @@ public struct DashboardHomeView: View {
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "iphone.radiowaves.left.and.right")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: isCompact ? 15 : 16, weight: .bold))
                         Text("START RECEIVER")
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .font(.system(size: isCompact ? 14 : 15, weight: .bold, design: .rounded))
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 50)
+                    .frame(height: isCompact ? 46 : 50)
                     .background(
                         LinearGradient(
                             colors: [Color(red: 0.0, green: 0.48, blue: 1.0), Color(red: 0.0, green: 0.35, blue: 0.8)],
@@ -467,7 +479,7 @@ public struct DashboardHomeView: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: isCompact ? 12 : 14, style: .continuous))
                     .shadow(color: Color.blue.opacity(0.35), radius: 10, x: 0, y: 5)
                 }
                 .simultaneousGesture(LongPressGesture(minimumDuration: 0.8).onEnded { _ in
@@ -482,29 +494,31 @@ public struct DashboardHomeView: View {
                 #endif
             }
 
-            // Specs Row
-            HStack(spacing: 6) {
-                Text("1080p @ 60 FPS")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(.cyan)
-                Text("•")
-                    .foregroundColor(.white.opacity(0.3))
-                Text("Bottom-Justified")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.7))
-                Text("•")
-                    .foregroundColor(.white.opacity(0.3))
-                Text("Multi-Touch")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.7))
+            if !isCompact {
+                // Specs Row
+                HStack(spacing: 6) {
+                    Text("1080p @ 60 FPS")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundColor(.cyan)
+                    Text("•")
+                        .foregroundColor(.white.opacity(0.3))
+                    Text("Auto-Geometry")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.7))
+                    Text("•")
+                        .foregroundColor(.white.opacity(0.3))
+                    Text("Multi-Touch")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .padding(.top, 2)
             }
-            .padding(.top, 2)
         }
-        .padding(18)
+        .padding(isCompact ? 14 : 18)
         .background(Color(white: 0.09).opacity(0.92))
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: isCompact ? 16 : 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: isCompact ? 16 : 20, style: .continuous)
                 .stroke(
                     LinearGradient(
                         colors: [Color.blue.opacity(0.5), Color.purple.opacity(0.3), Color.white.opacity(0.1)],
@@ -515,31 +529,31 @@ public struct DashboardHomeView: View {
                 )
         )
     }
-
     // MARK: - Card 2: Smart Dashcam & Sentry Console
 
-    private var dashcamControlCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private func dashcamControlCard(width: CGFloat) -> some View {
+        let isCompact = width < 520
+        return VStack(alignment: .leading, spacing: isCompact ? 10 : 14) {
             // Header Row
-            HStack(spacing: 12) {
+            HStack(spacing: isCompact ? 8 : 12) {
                 ZStack {
                     Circle()
                         .fill(dashcam.isRecording ? Color.red.opacity(0.2) : Color.white.opacity(0.1))
-                        .frame(width: 48, height: 48)
+                        .frame(width: isCompact ? 38 : 48, height: isCompact ? 38 : 48)
 
                     Image(systemName: dashcam.isRecording ? "record.circle.fill" : "camera.fill")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: isCompact ? 18 : 22, weight: .bold))
                         .foregroundColor(dashcam.isRecording ? .red : .white)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Smart Dashcam")
-                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                        .font(.system(size: isCompact ? 16 : 19, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
                     Text("Rolling Loop & Impact Sentry")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: isCompact ? 10 : 11, weight: .medium))
                         .foregroundColor(.white.opacity(0.6))
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
@@ -548,24 +562,24 @@ public struct DashboardHomeView: View {
                 Spacer()
 
                 if dashcam.isRecording {
-                    HStack(spacing: 5) {
+                    HStack(spacing: 4) {
                         Circle()
                             .fill(Color.red)
-                            .frame(width: 7, height: 7)
-                        DashcamTimerText(startTime: dashcam.recordingStartTime, fontSize: 11)
+                            .frame(width: 6, height: 6)
+                        DashcamTimerText(startTime: dashcam.recordingStartTime, fontSize: isCompact ? 10 : 11)
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, isCompact ? 7 : 8)
+                    .padding(.vertical, isCompact ? 3 : 4)
                     .background(Color.red.opacity(0.25))
                     .clipShape(Capsule())
                     .overlay(Capsule().stroke(Color.red.opacity(0.6), lineWidth: 1))
                     .fixedSize(horizontal: true, vertical: true)
                 } else {
                     Text("STANDBY")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .font(.system(size: isCompact ? 9 : 10, weight: .bold, design: .monospaced))
                         .foregroundColor(.white.opacity(0.6))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, isCompact ? 7 : 8)
+                        .padding(.vertical, isCompact ? 3 : 4)
                         .background(Color.white.opacity(0.08))
                         .clipShape(Capsule())
                         .lineLimit(1)
@@ -574,40 +588,57 @@ public struct DashboardHomeView: View {
             }
 
             // Metrics / Specs
-            VStack(spacing: 8) {
-                HStack {
-                    Label("Rolling Loop", systemImage: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white.opacity(0.75))
+            if isCompact {
+                HStack(spacing: 8) {
+                    Label("Loop (5m)", systemImage: "arrow.triangle.2.circlepath")
                     Spacer()
-                    Text("5-min segments")
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
-                }
-
-                HStack {
-                    Label("Impact Sentry", systemImage: "shield.checkered")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white.opacity(0.75))
-                    Spacer()
-                    Text("Active (1.8G)")
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    Label("Sentry (1.8G)", systemImage: "shield.checkered")
                         .foregroundColor(.green)
-                }
-
-                HStack {
-                    Label("Quota Guard", systemImage: "internaldrive.fill")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white.opacity(0.75))
                     Spacer()
-                    Text("3 GB FIFO")
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    Label("3GB FIFO", systemImage: "internaldrive.fill")
                         .foregroundColor(.cyan)
                 }
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .foregroundColor(.white.opacity(0.75))
+                .padding(8)
+                .background(Color.black.opacity(0.45))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            } else {
+                VStack(spacing: 8) {
+                    HStack {
+                        Label("Rolling Loop", systemImage: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white.opacity(0.75))
+                        Spacer()
+                        Text("5-min segments")
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundColor(.white)
+                    }
+
+                    HStack {
+                        Label("Impact Sentry", systemImage: "shield.checkered")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white.opacity(0.75))
+                        Spacer()
+                        Text("Active (1.8G)")
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundColor(.green)
+                    }
+
+                    HStack {
+                        Label("Quota Guard", systemImage: "internaldrive.fill")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white.opacity(0.75))
+                        Spacer()
+                        Text("3 GB FIFO")
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundColor(.cyan)
+                    }
+                }
+                .padding(10)
+                .background(Color.black.opacity(0.45))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
-            .padding(10)
-            .background(Color.black.opacity(0.45))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             // Action Button
             Button {
@@ -622,21 +653,21 @@ public struct DashboardHomeView: View {
                 HStack(spacing: 8) {
                     Circle()
                         .fill(dashcam.isRecording ? Color.white : (dashcam.isStarting ? Color.yellow : Color.red))
-                        .frame(width: 8, height: 8)
+                        .frame(width: 7, height: 7)
                     Text(dashcam.isRecording ? "STOP DASHCAM" : (dashcam.isStarting ? "STARTING SENSOR…" : "START DASHCAM"))
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: isCompact ? 14 : 15, weight: .bold, design: .rounded))
                 }
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 50)
+                .frame(height: isCompact ? 46 : 50)
                 .background(
                     dashcam.isRecording ?
                         LinearGradient(colors: [Color.red.opacity(0.8), Color(red: 0.7, green: 0.1, blue: 0.1)], startPoint: .top, endPoint: .bottom) :
                         LinearGradient(colors: [Color(white: 0.22), Color(white: 0.14)], startPoint: .top, endPoint: .bottom)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: isCompact ? 12 : 14, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: isCompact ? 12 : 14, style: .continuous)
                         .stroke(dashcam.isRecording ? Color.red : Color.white.opacity(0.2), lineWidth: 1.2)
                 )
                 .shadow(color: dashcam.isRecording ? Color.red.opacity(0.4) : Color.clear, radius: 8, x: 0, y: 4)
@@ -651,21 +682,21 @@ public struct DashboardHomeView: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                         Text("LOCK EMERGENCY CLIP")
                     }
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: isCompact ? 12 : 13, weight: .bold, design: .rounded))
                     .foregroundColor(.yellow)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 44)
+                    .frame(height: isCompact ? 40 : 44)
                     .background(Color.yellow.opacity(0.15))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow.opacity(0.5), lineWidth: 1))
                 }
             }
         }
-        .padding(18)
+        .padding(isCompact ? 14 : 18)
         .background(Color(white: 0.09).opacity(0.92))
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: isCompact ? 16 : 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: isCompact ? 16 : 20, style: .continuous)
                 .stroke(
                     dashcam.isRecording ? Color.red.opacity(0.6) : Color.white.opacity(0.12),
                     lineWidth: 1.2
@@ -676,27 +707,28 @@ public struct DashboardHomeView: View {
     // MARK: - Card 3: Cockpit Controls & System Settings
 
     private func cockpitControlsCard(width: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        let isCompact = width < 520
+        return VStack(alignment: .leading, spacing: isCompact ? 10 : 14) {
             // Header Row
-            HStack(spacing: 12) {
+            HStack(spacing: isCompact ? 8 : 12) {
                 ZStack {
                     Circle()
                         .fill(Color.cyan.opacity(0.15))
-                        .frame(width: 44, height: 44)
+                        .frame(width: isCompact ? 36 : 44, height: isCompact ? 36 : 44)
 
                     Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: isCompact ? 17 : 20, weight: .bold))
                         .foregroundColor(.cyan)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Cockpit Controls")
-                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                        .font(.system(size: isCompact ? 16 : 19, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
                     Text("Audio & Display Routing")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: isCompact ? 10 : 11, weight: .medium))
                         .foregroundColor(.white.opacity(0.6))
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
@@ -704,23 +736,21 @@ public struct DashboardHomeView: View {
 
                 Spacer()
 
-                if width >= 520 {
-                    Button {
-                        showingSettings = true
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "gearshape.fill")
-                                .font(.system(size: 12, weight: .semibold))
-                            Text("SETTINGS")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .frame(height: 36)
-                        .background(Color.white.opacity(0.1))
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                Button {
+                    showingSettings = true
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: isCompact ? 11 : 12, weight: .semibold))
+                        Text("SETTINGS")
+                            .font(.system(size: isCompact ? 10 : 11, weight: .bold, design: .rounded))
                     }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, isCompact ? 9 : 12)
+                    .frame(height: isCompact ? 32 : 36)
+                    .background(Color.white.opacity(0.1))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
             }
 
@@ -732,37 +762,17 @@ public struct DashboardHomeView: View {
                         .frame(maxWidth: .infinity)
                 }
             } else {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
                     audioRoutingSection
                     displayGeometrySection
-
-                    Button {
-                        showingSettings = true
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "gearshape.fill")
-                                .font(.system(size: 15, weight: .semibold))
-                            Text("ALL SETTINGS")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background(Color.white.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(Color.white.opacity(0.2), lineWidth: 1.2)
-                        )
-                    }
                 }
             }
         }
-        .padding(18)
+        .padding(isCompact ? 14 : 18)
         .background(Color(white: 0.09).opacity(0.92))
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: isCompact ? 16 : 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: isCompact ? 16 : 20, style: .continuous)
                 .stroke(Color.white.opacity(0.12), lineWidth: 1.2)
         )
     }
@@ -830,7 +840,7 @@ public struct DashboardHomeView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "aspectratio")
                             .font(.system(size: 13))
-                        Text("Bottom Fit")
+                        Text("Auto-Fit")
                             .font(.system(size: 13, weight: .bold))
                     }
                     .foregroundColor(!config.fillScreenEdgeToEdge ? .white : .white.opacity(0.6))
@@ -870,20 +880,21 @@ public struct DashboardHomeView: View {
     // MARK: - Cockpit Bottom Navigation Dock Bar
 
     private func cockpitBottomBar(width: CGFloat) -> some View {
-        HStack(spacing: 12) {
+        let isCompact = width < 520
+        return HStack(spacing: isCompact ? 8 : 12) {
             // Pairing Guide
             Button {
                 showingPairingGuide = true
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: isCompact ? 6 : 8) {
                     Image(systemName: "book.pages.fill")
-                        .font(.system(size: 14, weight: .bold))
-                    Text(width < 450 ? "Guide" : "Pairing Guide")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: isCompact ? 13 : 14, weight: .bold))
+                    Text(isCompact ? "Guide" : "Pairing Guide")
+                        .font(.system(size: isCompact ? 13 : 14, weight: .semibold))
                 }
                 .foregroundColor(.white.opacity(0.85))
-                .padding(.horizontal, width < 450 ? 12 : 16)
-                .frame(height: 48)
+                .padding(.horizontal, isCompact ? 10 : 16)
+                .frame(height: isCompact ? 42 : 48)
                 .background(Color(white: 0.12))
                 .clipShape(Capsule())
                 .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
@@ -893,15 +904,15 @@ public struct DashboardHomeView: View {
             Button {
                 showingConnect = true
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: isCompact ? 6 : 8) {
                     Image(systemName: "iphone.and.arrow.forward")
-                        .font(.system(size: 14, weight: .bold))
-                    Text(width < 450 ? "Connect" : "Connect Phone")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: isCompact ? 13 : 14, weight: .bold))
+                    Text(isCompact ? "Connect" : "Connect Phone")
+                        .font(.system(size: isCompact ? 13 : 14, weight: .semibold))
                 }
                 .foregroundColor(.white.opacity(0.85))
-                .padding(.horizontal, width < 450 ? 12 : 16)
-                .frame(height: 48)
+                .padding(.horizontal, isCompact ? 10 : 16)
+                .frame(height: isCompact ? 42 : 48)
                 .background(Color(white: 0.12))
                 .clipShape(Capsule())
                 .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
@@ -914,15 +925,15 @@ public struct DashboardHomeView: View {
                 Button {
                     stopSession()
                 } label: {
-                    HStack(spacing: 8) {
+                    HStack(spacing: isCompact ? 5 : 8) {
                         Image(systemName: "stop.circle.fill")
-                            .font(.system(size: 15, weight: .bold))
-                        Text(width < 450 ? "Stop" : "Stop Receiver")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .font(.system(size: isCompact ? 14 : 15, weight: .bold))
+                        Text(isCompact ? "Stop" : "Stop Receiver")
+                            .font(.system(size: isCompact ? 13 : 14, weight: .bold, design: .rounded))
                     }
                     .foregroundColor(Color(red: 1.0, green: 0.35, blue: 0.3))
-                    .padding(.horizontal, width < 450 ? 14 : 18)
-                    .frame(height: 48)
+                    .padding(.horizontal, isCompact ? 12 : 18)
+                    .frame(height: isCompact ? 42 : 48)
                     .background(Color.red.opacity(0.18))
                     .clipShape(Capsule())
                     .overlay(Capsule().stroke(Color.red.opacity(0.6), lineWidth: 1))

@@ -310,12 +310,19 @@ public final class SampleBufferContainerView: UIView {
             offsetY = 0
         } else {
             // View is taller than stream -> letterboxed:
-            // BOTTOM JUSTIFIED: CarPlay rests flush against bottom edge.
-            // Entire letterbox gap sits at the top for enlarged automotive controls.
             renderW = viewW
             renderH = CGFloat(Double(viewW) / streamAspect)
             offsetX = 0
-            offsetY = viewH - renderH
+            if viewW < viewH {
+                // PORTRAIT (Phone, Closed Duo):
+                // Vertically center so the CarPlay stream rests symmetrically at eye level
+                // between the top status bar and bottom cockpit action deck.
+                offsetY = (viewH - renderH) / 2.0
+            } else {
+                // LANDSCAPE (Widescreen, Opened Duo):
+                // Bottom-justified: flush against bottom edge, gap at top for controls.
+                offsetY = viewH - renderH
+            }
         }
 
         let frame = CGRect(x: offsetX, y: offsetY, width: renderW, height: renderH)

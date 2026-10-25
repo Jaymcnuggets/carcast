@@ -59,13 +59,7 @@ public struct RawVideoCanvasView: UIViewRepresentable {
 }
 
 public final class SampleBufferContainerView: UIView {
-    public override class var layerClass: AnyClass {
-        return AVSampleBufferDisplayLayer.self
-    }
-
-    public var sampleLayer: AVSampleBufferDisplayLayer {
-        return self.layer as! AVSampleBufferDisplayLayer
-    }
+    public let sampleLayer = AVSampleBufferDisplayLayer()
 
     public var onTouchEvent: ((Int, Double, Double) -> Void)?
     public var onRawTouchPoint: ((CGPoint?) -> Void)?
@@ -215,6 +209,7 @@ public final class SampleBufferContainerView: UIView {
         sampleLayer.videoGravity = .resizeAspect
         sampleLayer.backgroundColor = UIColor.black.cgColor
         sampleLayer.preventsDisplaySleepDuringVideoPlayback = true
+        layer.addSublayer(sampleLayer)
         updateVideoGravity()
 
         #if targetEnvironment(simulator)
@@ -237,61 +232,15 @@ public final class SampleBufferContainerView: UIView {
     private func setupTouches() {
         isUserInteractionEnabled = true
         isMultipleTouchEnabled = true
-
-        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTapGesture(_:)))
-        tap.cancelsTouchesInView = false
-        addGestureRecognizer(tap)
-
-        let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePanGesture(_:)))
-        pan.cancelsTouchesInView = false
-        addGestureRecognizer(pan)
-    }
-
-    @objc private func handleTapGesture(_ recognizer: UITapGestureRecognizer) {
-        let loc = recognizer.location(in: self)
-        let (normX, normY) = normalizedPoint(for: loc)
-        NSLog("[DrivingMode][Touch] TapGesture recognized at (%f, %f) -> norm=(%f, %f)", loc.x, loc.y, normX, normY)
-        onRawTouchPoint?(loc)
-        #if targetEnvironment(simulator)
-        handleSimulatorTouch(loc: loc, normX: normX, normY: normY)
-        #endif
-        onTouchEvent?(1, normX, normY)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            self?.onTouchEvent?(0, normX, normY)
-            self?.onRawTouchPoint?(nil)
-        }
-    }
-
-    @objc private func handlePanGesture(_ recognizer: UIPanGestureRecognizer) {
-        let loc = recognizer.location(in: self)
-        let (normX, normY) = normalizedPoint(for: loc)
-        switch recognizer.state {
-        case .began:
-            #if targetEnvironment(simulator)
-            simulatorTouchStart = loc
-            #endif
-            onTouchEvent?(1, normX, normY)
-        case .changed:
-            onTouchEvent?(2, normX, normY)
-        case .ended:
-            #if targetEnvironment(simulator)
-            handleSimulatorTouch(loc: loc, normX: normX, normY: normY)
-            #endif
-            onTouchEvent?(0, normX, normY)
-        case .cancelled, .failed:
-            #if targetEnvironment(simulator)
-            simulatorTouchStart = nil
-            #endif
-            onTouchEvent?(0, normX, normY)
-        default:
-            break
-        }
     }
 
     public override func layoutSubviews() {
         super.layoutSubviews()
         let geometry = computeRenderGeometry()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         sampleLayer.frame = geometry.frame
+        CATransaction.commit()
         updateVideoGravity()
         #if targetEnvironment(simulator)
         simulatorPreviewView.frame = geometry.frame

@@ -50,134 +50,7 @@ public struct CarPlayActiveScreenView: View {
 
                 // Top Controls & Status Bar (Automotive Touch Enclosure)
                 VStack(spacing: 0) {
-                    HStack(alignment: .center, spacing: 12) {
-                        // Navigation & Dashcam quick controls
-                        HStack(spacing: 10) {
-                            // Return to Main Menu (Enlarged Automotive Touch Pill)
-                            Button {
-                                onReturnToMenu?()
-                                NotificationCenter.default.post(name: .returnToMainMenu, object: nil)
-                                dismiss()
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "chevron.left")
-                                        .font(.system(size: 15, weight: .bold))
-                                    Text("MENU")
-                                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                                }
-                                .foregroundColor(.white)
-                                .frame(height: 48)
-                                .padding(.horizontal, 18)
-                                .background(Color.black.opacity(0.75))
-                                .clipShape(Capsule())
-                                .overlay(
-                                    Capsule()
-                                        .stroke(Color.white.opacity(0.22), lineWidth: 1.2)
-                                )
-                                .shadow(color: Color.black.opacity(0.4), radius: 8, x: 0, y: 4)
-                            }
-
-                            // Always-visible Dashcam controls in CarPlay top bar
-                            Button {
-                                if dashcam.isRecording {
-                                    dashcam.stopRecording()
-                                    config.isDashcamEnabled = false
-                                } else {
-                                    config.isDashcamEnabled = true
-                                    dashcam.startRecording(withAudio: config.isDashcamAudioEnabled)
-                                }
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Circle()
-                                        .fill(dashcam.isRecording ? Color.red : (dashcam.isStarting ? Color.yellow : Color.white.opacity(0.4)))
-                                        .frame(width: 10, height: 10)
-
-                                    Image(systemName: dashcam.isRecording ? "record.circle.fill" : "camera.fill")
-                                        .font(.system(size: 16, weight: .bold))
-
-                                    Text(dashcam.isRecording ? "DASHCAM REC" : (dashcam.isStarting ? "STARTING…" : "START DASHCAM"))
-                                        .font(.system(size: 15, weight: .bold, design: .rounded))
-
-                                    if dashcam.isRecording {
-                                        DashcamTimerText(startTime: dashcam.recordingStartTime, fontSize: 13)
-                                    }
-                                }
-                                .foregroundColor(.white)
-                                .frame(height: 48)
-                                .padding(.horizontal, 18)
-                                .background(dashcam.isRecording ? Color.red.opacity(0.35) : (dashcam.isStarting ? Color.yellow.opacity(0.25) : Color.black.opacity(0.75)))
-                                .clipShape(Capsule())
-                                .overlay(
-                                    Capsule()
-                                        .stroke(dashcam.isRecording ? Color.red.opacity(0.8) : Color.white.opacity(0.22), lineWidth: 1.2)
-                                )
-                                .shadow(color: dashcam.isRecording ? Color.red.opacity(0.3) : Color.black.opacity(0.4), radius: 8, x: 0, y: 4)
-                            }
-
-                            if dashcam.isRecording {
-                                Button {
-                                    dashcam.saveCurrentEvent(reason: "CarPlay Screen")
-                                } label: {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "exclamationmark.triangle.fill")
-                                            .font(.system(size: 15, weight: .bold))
-                                        Text("LOCK CLIP")
-                                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                                    }
-                                    .foregroundColor(.yellow)
-                                    .frame(height: 48)
-                                    .padding(.horizontal, 16)
-                                    .background(Color.yellow.opacity(0.18))
-                                    .clipShape(Capsule())
-                                    .overlay(
-                                        Capsule()
-                                            .stroke(Color.yellow.opacity(0.7), lineWidth: 1.2)
-                                    )
-                                    .shadow(color: Color.black.opacity(0.4), radius: 8, x: 0, y: 4)
-                                }
-                            }
-                        }
-                        .padding(.leading, 52)
-                        .padding(.top, 14)
-
-                        Spacer()
-
-                        // Right Status Cluster (Enlarged Automotive HUD Pill)
-                        HStack(spacing: 8) {
-                            Circle()
-                                .fill(manager.isStreamingActive ? Color.green : Color.orange)
-                                .frame(width: 9, height: 9)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("CarPlay \(manager.isStreamingActive ? "Connected" : "Waiting")")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
-
-                                HStack(spacing: 4) {
-                                    Text("\(manager.totalFramesReceived) frames")
-                                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                        .foregroundColor(.white.opacity(0.7))
-                                    Text("•")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.white.opacity(0.35))
-                                    Text(config.audioRoutingMode == .airPlayInBand ? "IN-BAND AUDIO" : "BT PASSTHROUGH")
-                                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                        .foregroundColor(config.audioRoutingMode == .airPlayInBand ? .cyan : .yellow)
-                                }
-                            }
-                        }
-                        .frame(height: 48)
-                        .padding(.horizontal, 16)
-                        .background(Color.black.opacity(0.75))
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule()
-                                .stroke(Color.white.opacity(0.22), lineWidth: 1.2)
-                        )
-                        .shadow(color: Color.black.opacity(0.4), radius: 8, x: 0, y: 4)
-                        .padding(.trailing, 28)
-                        .padding(.top, 14)
-                    }
+                    topControls(geo: geo)
                     Spacer()
                 }
 
@@ -236,10 +109,184 @@ public struct CarPlayActiveScreenView: View {
                 manager.sendHomeButtonPress()
             }
         }
-        .onChange(of: manager.isStreamingActive) { active in
+        .onDisappear {
+            SteeringWheelRemoteService.shared.onEmergencySavePressed = nil
+            SteeringWheelRemoteService.shared.onHomePressed = nil
+        }
+        .onChange(of: manager.isStreamingActive) { _, active in
             if !active {
                 dismiss()
             }
         }
+    }
+
+    // MARK: - Header Controls Layout
+
+    @ViewBuilder
+    private func topControls(geo: GeometryProxy) -> some View {
+        let isPortrait = geo.size.width < geo.size.height
+        let leadingInset = max(geo.safeAreaInsets.leading, isPortrait ? 18 : 44)
+        let trailingInset = max(geo.safeAreaInsets.trailing, isPortrait ? 18 : 44)
+        let topInset = max(geo.safeAreaInsets.top, 14)
+
+        if isPortrait {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center) {
+                    menuButton
+                    Spacer()
+                    statusCluster
+                }
+                HStack(spacing: 10) {
+                    dashcamButton
+                    if dashcam.isRecording {
+                        lockClipButton
+                    }
+                    Spacer()
+                }
+            }
+            .padding(.leading, leadingInset)
+            .padding(.trailing, trailingInset)
+            .padding(.top, topInset)
+        } else {
+            HStack(alignment: .center, spacing: 12) {
+                HStack(spacing: 10) {
+                    menuButton
+                    dashcamButton
+                    if dashcam.isRecording {
+                        lockClipButton
+                    }
+                }
+
+                Spacer()
+
+                statusCluster
+            }
+            .padding(.leading, leadingInset)
+            .padding(.trailing, trailingInset)
+            .padding(.top, topInset)
+        }
+    }
+
+    // MARK: - Subviews
+
+    private var menuButton: some View {
+        Button {
+            onReturnToMenu?()
+            NotificationCenter.default.post(name: .returnToMainMenu, object: nil)
+            dismiss()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 15, weight: .bold))
+                Text("MENU")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+            }
+            .foregroundColor(.white)
+            .frame(height: 48)
+            .padding(.horizontal, 18)
+            .background(Color.black.opacity(0.75))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Color.white.opacity(0.22), lineWidth: 1.2)
+            )
+            .shadow(color: Color.black.opacity(0.4), radius: 8, x: 0, y: 4)
+        }
+    }
+
+    private var dashcamButton: some View {
+        Button {
+            if dashcam.isRecording {
+                dashcam.stopRecording()
+                config.isDashcamEnabled = false
+            } else {
+                config.isDashcamEnabled = true
+                dashcam.startRecording(withAudio: config.isDashcamAudioEnabled)
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(dashcam.isRecording ? Color.red : (dashcam.isStarting ? Color.yellow : Color.white.opacity(0.4)))
+                    .frame(width: 10, height: 10)
+
+                Image(systemName: dashcam.isRecording ? "record.circle.fill" : "camera.fill")
+                    .font(.system(size: 16, weight: .bold))
+
+                Text(dashcam.isRecording ? "DASHCAM REC" : (dashcam.isStarting ? "STARTING…" : "START DASHCAM"))
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+
+                if dashcam.isRecording {
+                    DashcamTimerText(startTime: dashcam.recordingStartTime, fontSize: 13)
+                }
+            }
+            .foregroundColor(.white)
+            .frame(height: 48)
+            .padding(.horizontal, 18)
+            .background(dashcam.isRecording ? Color.red.opacity(0.35) : (dashcam.isStarting ? Color.yellow.opacity(0.25) : Color.black.opacity(0.75)))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(dashcam.isRecording ? Color.red.opacity(0.8) : Color.white.opacity(0.22), lineWidth: 1.2)
+            )
+            .shadow(color: dashcam.isRecording ? Color.red.opacity(0.3) : Color.black.opacity(0.4), radius: 8, x: 0, y: 4)
+        }
+    }
+
+    private var lockClipButton: some View {
+        Button {
+            dashcam.saveCurrentEvent(reason: "CarPlay Screen")
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 15, weight: .bold))
+                Text("LOCK CLIP")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+            }
+            .foregroundColor(.yellow)
+            .frame(height: 48)
+            .padding(.horizontal, 16)
+            .background(Color.yellow.opacity(0.18))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Color.yellow.opacity(0.7), lineWidth: 1.2)
+            )
+            .shadow(color: Color.black.opacity(0.4), radius: 8, x: 0, y: 4)
+        }
+    }
+
+    private var statusCluster: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(manager.isStreamingActive ? Color.green : Color.orange)
+                .frame(width: 9, height: 9)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("CarPlay \(manager.isStreamingActive ? "Connected" : "Waiting")")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+
+                HStack(spacing: 4) {
+                    Text("\(manager.totalFramesReceived) frames")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.7))
+                    Text("•")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.35))
+                    Text(config.audioRoutingMode == .airPlayInBand ? "IN-BAND AUDIO" : "BT PASSTHROUGH")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundColor(config.audioRoutingMode == .airPlayInBand ? .cyan : .yellow)
+                }
+            }
+        }
+        .frame(height: 48)
+        .padding(.horizontal, 16)
+        .background(Color.black.opacity(0.75))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(Color.white.opacity(0.22), lineWidth: 1.2)
+        )
+        .shadow(color: Color.black.opacity(0.4), radius: 8, x: 0, y: 4)
     }
 }

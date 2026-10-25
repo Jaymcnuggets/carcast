@@ -11,7 +11,7 @@ import UIKit
 
 public final class AppDelegate: NSObject, UIApplicationDelegate {
     public func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
-        return .landscape
+        return .all
     }
 }
 #endif
@@ -69,7 +69,7 @@ struct DrivingModeApp: App {
                 #if canImport(UIKit)
                 DispatchQueue.main.async {
                     if let windowScene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene ?? UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                        windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscape)) { error in
+                        windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .all)) { error in
                             NSLog("[DrivingMode] requestGeometryUpdate error: %@", error.localizedDescription)
                         }
                     }

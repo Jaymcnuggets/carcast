@@ -79,6 +79,11 @@ public struct DashboardHomeView: View {
                 showingActiveCarPlay = false
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .returnToCarPlay)) { _ in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showingActiveCarPlay = true
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .toggleDashcam)) { _ in
             if dashcam.isRecording {
                 dashcam.stopRecording()
@@ -113,23 +118,23 @@ public struct DashboardHomeView: View {
                     VStack(spacing: 0) {
                         // Top Cockpit Status Bar
                         cockpitHeaderBar
-                            .padding(.leading, 40)
-                            .padding(.trailing, 40)
+                            .padding(.leading, max(geo.safeAreaInsets.leading, 32))
+                            .padding(.trailing, max(geo.safeAreaInsets.trailing, 32))
                             .padding(.top, 12)
                             .padding(.bottom, 12)
 
                         // Main Cockpit Center Stage
                         ScrollView(.vertical, showsIndicators: false) {
                             cockpitCardsLayout(width: geo.size.width)
-                                .padding(.leading, 40)
-                                .padding(.trailing, 40)
+                                .padding(.leading, max(geo.safeAreaInsets.leading, 32))
+                                .padding(.trailing, max(geo.safeAreaInsets.trailing, 32))
                                 .padding(.vertical, 6)
                         }
 
                         // Bottom Navigation Action Bar
                         cockpitBottomBar
-                            .padding(.leading, 40)
-                            .padding(.trailing, 40)
+                            .padding(.leading, max(geo.safeAreaInsets.leading, 32))
+                            .padding(.trailing, max(geo.safeAreaInsets.trailing, 32))
                             .padding(.vertical, 12)
                     }
 
@@ -628,13 +633,13 @@ public struct DashboardHomeView: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                         Text("LOCK EMERGENCY CLIP")
                     }
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundColor(.yellow)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 36)
+                    .frame(height: 44)
                     .background(Color.yellow.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.yellow.opacity(0.5), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow.opacity(0.5), lineWidth: 1))
                 }
             }
         }
@@ -688,19 +693,19 @@ public struct DashboardHomeView: View {
                     Button {
                         config.audioRoutingMode = .airPlayInBand
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 6) {
                             Image(systemName: "speaker.wave.2.fill")
-                                .font(.system(size: 11))
+                                .font(.system(size: 13))
                             Text("In-Band")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: 13, weight: .bold))
                         }
                         .foregroundColor(config.audioRoutingMode == .airPlayInBand ? .white : .white.opacity(0.6))
                         .frame(maxWidth: .infinity)
-                        .frame(height: 38)
+                        .frame(height: 44)
                         .background(config.audioRoutingMode == .airPlayInBand ? Color.cyan.opacity(0.35) : Color.white.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10)
+                            RoundedRectangle(cornerRadius: 12)
                                 .stroke(config.audioRoutingMode == .airPlayInBand ? Color.cyan : Color.white.opacity(0.1), lineWidth: 1)
                         )
                     }
@@ -708,19 +713,19 @@ public struct DashboardHomeView: View {
                     Button {
                         config.audioRoutingMode = .carBluetoothPassthrough
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 6) {
                             Image(systemName: "antenna.radiowaves.left.and.right")
-                                .font(.system(size: 11))
+                                .font(.system(size: 13))
                             Text("Bluetooth")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: 13, weight: .bold))
                         }
                         .foregroundColor(config.audioRoutingMode == .carBluetoothPassthrough ? .white : .white.opacity(0.6))
                         .frame(maxWidth: .infinity)
-                        .frame(height: 38)
+                        .frame(height: 44)
                         .background(config.audioRoutingMode == .carBluetoothPassthrough ? Color.orange.opacity(0.35) : Color.white.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10)
+                            RoundedRectangle(cornerRadius: 12)
                                 .stroke(config.audioRoutingMode == .carBluetoothPassthrough ? Color.orange : Color.white.opacity(0.1), lineWidth: 1)
                         )
                     }
@@ -737,19 +742,19 @@ public struct DashboardHomeView: View {
                     Button {
                         config.fillScreenEdgeToEdge = false
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 6) {
                             Image(systemName: "aspectratio")
-                                .font(.system(size: 11))
+                                .font(.system(size: 13))
                             Text("Bottom Fit")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: 13, weight: .bold))
                         }
                         .foregroundColor(!config.fillScreenEdgeToEdge ? .white : .white.opacity(0.6))
                         .frame(maxWidth: .infinity)
-                        .frame(height: 38)
+                        .frame(height: 44)
                         .background(!config.fillScreenEdgeToEdge ? Color.blue.opacity(0.35) : Color.white.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10)
+                            RoundedRectangle(cornerRadius: 12)
                                 .stroke(!config.fillScreenEdgeToEdge ? Color.blue : Color.white.opacity(0.1), lineWidth: 1)
                         )
                     }
@@ -757,19 +762,19 @@ public struct DashboardHomeView: View {
                     Button {
                         config.fillScreenEdgeToEdge = true
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 6) {
                             Image(systemName: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
-                                .font(.system(size: 11))
+                                .font(.system(size: 13))
                             Text("Edge-to-Edge")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: 13, weight: .bold))
                         }
                         .foregroundColor(config.fillScreenEdgeToEdge ? .white : .white.opacity(0.6))
                         .frame(maxWidth: .infinity)
-                        .frame(height: 38)
+                        .frame(height: 44)
                         .background(config.fillScreenEdgeToEdge ? Color.purple.opacity(0.35) : Color.white.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10)
+                            RoundedRectangle(cornerRadius: 12)
                                 .stroke(config.fillScreenEdgeToEdge ? Color.purple : Color.white.opacity(0.1), lineWidth: 1)
                         )
                     }
@@ -814,15 +819,15 @@ public struct DashboardHomeView: View {
             Button {
                 showingPairingGuide = true
             } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     Image(systemName: "book.pages.fill")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 14, weight: .bold))
                     Text("Pairing Guide")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                 }
                 .foregroundColor(.white.opacity(0.85))
-                .padding(.horizontal, 14)
-                .frame(height: 42)
+                .padding(.horizontal, 16)
+                .frame(height: 48)
                 .background(Color(white: 0.12))
                 .clipShape(Capsule())
                 .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
@@ -832,15 +837,15 @@ public struct DashboardHomeView: View {
             Button {
                 showingConnect = true
             } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     Image(systemName: "iphone.and.arrow.forward")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 14, weight: .bold))
                     Text("Connect Phone")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                 }
                 .foregroundColor(.white.opacity(0.85))
-                .padding(.horizontal, 14)
-                .frame(height: 42)
+                .padding(.horizontal, 16)
+                .frame(height: 48)
                 .background(Color(white: 0.12))
                 .clipShape(Capsule())
                 .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
@@ -853,15 +858,15 @@ public struct DashboardHomeView: View {
                 Button {
                     stopSession()
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 8) {
                         Image(systemName: "stop.circle.fill")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 15, weight: .bold))
                         Text("Stop Receiver")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
                     }
                     .foregroundColor(Color(red: 1.0, green: 0.35, blue: 0.3))
-                    .padding(.horizontal, 16)
-                    .frame(height: 42)
+                    .padding(.horizontal, 18)
+                    .frame(height: 48)
                     .background(Color.red.opacity(0.18))
                     .clipShape(Capsule())
                     .overlay(Capsule().stroke(Color.red.opacity(0.6), lineWidth: 1))

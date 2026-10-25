@@ -637,6 +637,12 @@ public final class DeveloperTouchService: @unchecked Sendable {
                     NotificationCenter.default.post(name: .returnToMainMenu, object: nil)
                 }
                 responseJson = "{\"ok\": true, \"action\": \"menu\"}"
+            } else if path.starts(with: "/carplay") {
+                writeAppLog("[DevTouch] Received HTTP /carplay request")
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .returnToCarPlay, object: nil)
+                }
+                responseJson = "{\"ok\": true, \"action\": \"carplay\"}"
             } else if path.starts(with: "/dashcam") {
                 writeAppLog("[DevTouch] Received HTTP /dashcam request")
                 DispatchQueue.main.async {
@@ -682,5 +688,6 @@ public final class DeveloperTouchService: @unchecked Sendable {
 
 public extension Notification.Name {
     static let returnToMainMenu = Notification.Name("dev.unordinarylabs.drivingmode.returnToMainMenu")
+    static let returnToCarPlay = Notification.Name("dev.unordinarylabs.drivingmode.returnToCarPlay")
     static let toggleDashcam = Notification.Name("dev.unordinarylabs.drivingmode.toggleDashcam")
 }

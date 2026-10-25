@@ -56,22 +56,28 @@ public struct DashboardHomeView: View {
     }
 
     public var body: some View {
-        Group {
-            if manager.isStreamingActive && showingActiveCarPlay {
+        ZStack {
+            if manager.isStreamingActive {
                 CarPlayActiveScreenView(onReturnToMenu: {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         showingActiveCarPlay = false
                     }
                 })
-                .ignoresSafeArea(.all)
-            } else {
+                .opacity(showingActiveCarPlay ? 1.0 : 0.0)
+                .allowsHitTesting(showingActiveCarPlay)
+            }
+
+            if !showingActiveCarPlay || !manager.isStreamingActive {
                 dashboardView
+                    .transition(.opacity)
             }
         }
-        .ignoresSafeArea((manager.isStreamingActive && showingActiveCarPlay) ? .all : [])
+        .ignoresSafeArea(.all)
         .onChange(of: manager.isStreamingActive) { _, active in
             if active {
-                showingActiveCarPlay = true
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showingActiveCarPlay = true
+                }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .returnToMainMenu)) { _ in
@@ -120,7 +126,7 @@ public struct DashboardHomeView: View {
                         cockpitHeaderBar(width: geo.size.width)
                             .padding(.leading, max(geo.safeAreaInsets.leading, 32))
                             .padding(.trailing, max(geo.safeAreaInsets.trailing, 32))
-                            .padding(.top, 12)
+                            .padding(.top, max(geo.safeAreaInsets.top, 12))
                             .padding(.bottom, 12)
 
                         // Main Cockpit Center Stage
@@ -135,7 +141,7 @@ public struct DashboardHomeView: View {
                         cockpitBottomBar(width: geo.size.width)
                             .padding(.leading, max(geo.safeAreaInsets.leading, 32))
                             .padding(.trailing, max(geo.safeAreaInsets.trailing, 32))
-                            .padding(.vertical, 12)
+                            .padding(.bottom, max(geo.safeAreaInsets.bottom, 12))
                     }
 
                     // Floating live Dashcam viewfinder overlay
@@ -394,7 +400,9 @@ public struct DashboardHomeView: View {
             // Primary Launch / Control Action Button
             if manager.state == .streaming {
                 Button {
-                    showingActiveCarPlay = true
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showingActiveCarPlay = true
+                    }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "play.tv.fill")

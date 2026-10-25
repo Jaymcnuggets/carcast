@@ -130,7 +130,9 @@ public struct CarPlayActiveScreenView: View {
         let trailingInset = max(geo.safeAreaInsets.trailing, isPortrait ? 18 : 44)
         let topInset = max(geo.safeAreaInsets.top, 14)
 
-        let streamAspect: Double = 1344.0 / 720.0
+        let streamAspect: Double = (manager.currentStreamResolution.width > 0 && manager.currentStreamResolution.height > 0)
+            ? Double(manager.currentStreamResolution.width) / Double(manager.currentStreamResolution.height)
+            : (1344.0 / 720.0)
         let viewAspect = Double(geo.size.width / geo.size.height)
         let renderH = viewAspect < streamAspect ? CGFloat(Double(geo.size.width) / streamAspect) : geo.size.height
         let topGap = max(0, geo.size.height - renderH)

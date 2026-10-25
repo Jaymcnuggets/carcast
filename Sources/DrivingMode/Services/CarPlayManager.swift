@@ -207,7 +207,7 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
             if self.connectedClientName == nil {
                 self.connectedClientName = "This iPhone"
             }
-            self.currentStreamResolution = CGSize(width: 1280, height: 494)
+            self.currentStreamResolution = CGSize(width: 1344, height: 720)
         }
         self.onSampleBuffer?(sampleBuffer)
     }
@@ -227,7 +227,7 @@ public final class CarPlayManager: ObservableObject, @unchecked Sendable {
             source: "CarPlayManager.startLocalSimulation"
         )
         connectedClientName = "This iPhone"
-        currentStreamResolution = CGSize(width: 1280, height: 494)
+        currentStreamResolution = CGSize(width: 1344, height: 720)
 
         ProtocolLogger.shared.log(
             category: .system,

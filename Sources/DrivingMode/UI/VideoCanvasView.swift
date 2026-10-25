@@ -55,6 +55,7 @@ public struct RawVideoCanvasView: UIViewRepresentable {
             uiView.flush()
         }
         uiView.updateVideoGravity()
+        uiView.setNeedsLayout()
     }
 }
 
@@ -289,7 +290,7 @@ public final class SampleBufferContainerView: UIView {
             streamH = Double(CarPlayManager.shared.currentStreamResolution.height)
         } else {
             streamW = 1920.0
-            streamH = 1028.0
+            streamH = 1080.0
         }
         #endif
 
